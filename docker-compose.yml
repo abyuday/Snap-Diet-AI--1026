@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dietitian_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./datasets:/app/datasets
+      - ./FNDDS:/app/FNDDS
+      - ./models:/app/models
+    networks:
+      - dietitian_network
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dietitian_frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - dietitian_network
+    restart: always
+
+networks:
+  dietitian_network:
+    driver: bridge

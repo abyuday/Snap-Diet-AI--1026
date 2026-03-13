@@ -1,0 +1,45 @@
+# Binary files
+*.zip
+*.tar
+*.gz
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+ios/.generated/
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/src/main/res/values/strings.xml
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Flutter.podspec
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.xcframework
+ios/Flutter/App.framework
+ios/Flutter/App.xcframework
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.DS_Store
+
+# Misc
+*.log
+rebuild_log.txt
+
+models/*.pth
+
+datasets/

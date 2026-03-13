@@ -1,0 +1,7 @@
+flutter_windows.zip
+flutter_windows_3.22.zip
+FNDDS/
+NHANES/
+datasets/
+__pycache__/
+*.pyc

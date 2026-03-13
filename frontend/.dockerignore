@@ -1,0 +1,6 @@
+flutter_windows.zip
+flutter_windows_3.22.zip
+.dart_tool/
+build/
+.idea/
+*.iml
