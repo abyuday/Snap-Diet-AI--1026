@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/history_provider.dart';
 import '../theme/app_theme.dart';
 import 'analysis_screen.dart';
+import 'multi_capture_screen.dart';
 import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -60,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen>
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              AnalysisScreen(imageFile: image),
+              MultiCaptureScreen(initialImages: [image]),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -68,6 +69,20 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
     }
+  }
+
+  void _openMultiCapture() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const MultiCaptureScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
   }
 
   @override
@@ -299,12 +314,12 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       children: [
         _ScanButton(
-          label: 'Take a Photo',
+          label: 'Scan Food (Multi-Angle)',
           icon: Icons.camera_alt_rounded,
           gradient: const LinearGradient(
             colors: [Color(0xFF56C27B), Color(0xFF2E7D32)],
           ),
-          onTap: () => _pickImage(ImageSource.camera),
+          onTap: _openMultiCapture,
         ),
         const SizedBox(height: 14),
         _ScanButton(

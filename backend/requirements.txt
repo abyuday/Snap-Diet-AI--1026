@@ -17,3 +17,4 @@ scikit-learn
 tqdm
 python-dotenv
 openai
+Pillow

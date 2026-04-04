@@ -5,3 +5,4 @@ NHANES/
 datasets/
 __pycache__/
 *.pyc
+venv/

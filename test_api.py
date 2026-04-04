@@ -1,14 +1,26 @@
 import requests
 import os
 
-url = "http://127.0.0.1:8000/analyze"
-img_path = r"c:\Users\srineer\Downloads\DietitianAI\datasets\Nutrition5k_dataset\imagery\realsense_overhead\dish_1550705580\rgb.png"
+url_analyze = "http://127.0.0.1:8000/analyze"
+url_predict = "http://127.0.0.1:8000/predict"
+img_path = r"c:\Users\srineer\Downloads\DietitianAI\datasets\Nutrition5k_dataset\imagery\realsense_overhead\dish_1558026623\rgb.png"
 
 if os.path.exists(img_path):
+    print("Testing /analyze:")
     with open(img_path, "rb") as f:
         files = {"file": f}
         try:
-            response = requests.post(url, files=files)
+            response = requests.post(url_analyze, files=files)
+            print(f"Status: {response.status_code}")
+            print(f"Result: {response.json()}")
+        except Exception as e:
+            print(f"Error: {e}")
+            
+    print("\nTesting /predict:")
+    with open(img_path, "rb") as f:
+        files = {"file": f}
+        try:
+            response = requests.post(url_predict, files=files)
             print(f"Status: {response.status_code}")
             print(f"Result: {response.json()}")
         except Exception as e:

@@ -10,9 +10,10 @@ class ApiService {
   /// (Android emulator: 10.0.2.2; physical device: your machine's IP)
   static final String baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
+    defaultValue: 'http://127.0.0.1:8005',
   );
 
+  /// Analyze a single food image via /analyze endpoint
   Future<NutritionResult> analyzeImage(XFile imageFile) async {
     var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/analyze'));
     
@@ -32,6 +33,40 @@ class ApiService {
       return NutritionResult.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to analyze image: ${response.body}');
+    }
+  }
+
+  /// Analyze multiple food images (different angles) via /analyze-multi endpoint
+  Future<NutritionResult> analyzeMultipleImages(List<XFile> imageFiles) async {
+    if (imageFiles.isEmpty) {
+      throw Exception('At least one image is required.');
+    }
+
+    // If only one image, use the single-image endpoint
+    if (imageFiles.length == 1) {
+      return analyzeImage(imageFiles.first);
+    }
+
+    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/analyze-multi'));
+    
+    for (final imageFile in imageFiles) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'files',
+          await imageFile.readAsBytes(),
+          filename: imageFile.name,
+          contentType: MediaType.parse(imageFile.name.endsWith('.png') ? 'image/png' : 'image/jpeg'),
+        ),
+      );
+    }
+
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return NutritionResult.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to analyze images: ${response.body}');
     }
   }
 

@@ -161,10 +161,31 @@ class _ResultsScreenState extends State<ResultsScreen>
                                         ),
                                       ],
                                     ),
+                                    if (widget.result.estimatedWeightGrams > 0) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.scale_rounded, color: Colors.white.withOpacity(0.5), size: 15),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            '~${widget.result.estimatedWeightGrams.toStringAsFixed(0)}g',
+                                            style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 14),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
-                              _CalorieBadge(calories: widget.result.calories),
+                              Column(
+                                children: [
+                                  _CalorieBadge(calories: widget.result.calories),
+                                  if (widget.result.estimatedWeightGrams > 0) ...[
+                                    const SizedBox(height: 8),
+                                    _WeightBadge(weightGrams: widget.result.estimatedWeightGrams),
+                                  ],
+                                ],
+                              ),
                             ],
                           ),
                           const SizedBox(height: 28),
@@ -217,6 +238,35 @@ class _ResultsScreenState extends State<ResultsScreen>
                             value: widget.result.fat,
                             maxValue: 100,
                             color: const Color(0xFFFF6B8A),
+                          ),
+                          const SizedBox(height: 28),
+                          // Micronutrients Expandable Section
+                          Theme(
+                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              tilePadding: EdgeInsets.zero,
+                              iconColor: Colors.white,
+                              collapsedIconColor: Colors.white70,
+                              title: Text(
+                                'Micronutrients',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              children: [
+                                const SizedBox(height: 8),
+                                _MicroNutrientRow(label: 'Fiber', value: '${widget.result.fiberG} g'),
+                                _MicroNutrientRow(label: 'Sugar', value: '${widget.result.sugarG} g'),
+                                _MicroNutrientRow(label: 'Sodium', value: '${widget.result.sodiumMg} mg'),
+                                _MicroNutrientRow(label: 'Potassium', value: '${widget.result.potassiumMg} mg'),
+                                _MicroNutrientRow(label: 'Vitamin A', value: '${widget.result.vitaminAMcg} mcg'),
+                                _MicroNutrientRow(label: 'Vitamin C', value: '${widget.result.vitaminCMg} mg'),
+                                _MicroNutrientRow(label: 'Calcium', value: '${widget.result.calciumMg} mg'),
+                                _MicroNutrientRow(label: 'Iron', value: '${widget.result.ironMg} mg'),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 32),
                           // Action buttons
@@ -307,6 +357,49 @@ class _CalorieBadge extends StatelessWidget {
             style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
           ),
           Text('kcal', style: TextStyle(fontSize: 12, color: AppTheme.primaryColor.withOpacity(0.8))),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeightBadge extends StatelessWidget {
+  final double weightGrams;
+  const _WeightBadge({required this.weightGrams});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF4FA3E0).withOpacity(0.3),
+            const Color(0xFF4FA3E0).withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF4FA3E0).withOpacity(0.35)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '~${weightGrams.toStringAsFixed(0)}',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF4FA3E0),
+            ),
+          ),
+          Text(
+            'grams',
+            style: TextStyle(
+              fontSize: 11,
+              color: const Color(0xFF4FA3E0).withOpacity(0.8),
+            ),
+          ),
         ],
       ),
     );
@@ -415,6 +508,25 @@ class _AnimatedMacroBarState extends State<_AnimatedMacroBar>
           style: TextStyle(color: widget.color, fontSize: 13, fontWeight: FontWeight.bold),
         ),
       ],
+    );
+  }
+}
+
+class _MicroNutrientRow extends StatelessWidget {
+  final String label, value;
+  const _MicroNutrientRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 15)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 }
