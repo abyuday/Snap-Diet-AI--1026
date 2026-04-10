@@ -1,5 +1,7 @@
-flutter_windows.zip
-flutter_windows_3.22.zip
+flutter_*.zip
+flutter_*.tar.xz
+flutter/
+flutter_sdk/
 .dart_tool/
 build/
 .idea/

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import 'analysis_screen.dart';
+import 'ar_capture_screen.dart';
 
 /// Angle guide info for each capture slot
 class _AngleGuide {
@@ -215,6 +216,41 @@ class _MultiCaptureScreenState extends State<MultiCaptureScreen>
                     ),
                   ),
                   const Spacer(),
+                  // AR Mode button
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ArCaptureScreen()),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.view_in_ar_rounded,
+                              color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'AR Mode',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(

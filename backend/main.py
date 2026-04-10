@@ -1,5 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import json
 from pydantic import BaseModel
 import shutil
 import os
@@ -196,6 +197,81 @@ def analyze_food_multi(files: List[UploadFile] = File(...)):
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="Multi-image analysis failed.")
+    finally:
+        for p in saved_paths:
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
+
+
+class TextAnalyzeRequest(BaseModel):
+    query: str
+
+@app.post("/analyze-text", response_model=NutritionResponse)
+def analyze_food_text(req: TextAnalyzeRequest):
+    """
+    Endpoint for Manual Food Logging via text.
+    Takes a natural language query like "2 bowls of dal tadka" and returns scaled nutrition.
+    """
+    if not req.query or not req.query.strip():
+        raise HTTPException(status_code=400, detail="Text query cannot be empty.")
+
+    try:
+        from services.food_analyzer import predict_food_text, _prediction_to_response
+        prediction = predict_food_text(req.query.strip())
+        return _prediction_to_response(prediction)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Text analysis failed: {str(e)}")
+
+
+@app.post("/analyze-ar", response_model=NutritionResponse)
+def analyze_food_ar(files: List[UploadFile] = File(...), pose_data: Optional[str] = Form(None)):
+    """
+    Endpoint for AR-enhanced multiple food images analysis.
+    Takes images and an optional JSON string containing camera pose metadata.
+    """
+    if not files:
+        raise HTTPException(status_code=400, detail="At least one image is required.")
+    if len(files) > 6:
+        raise HTTPException(status_code=400, detail="Maximum 6 images allowed.")
+
+    parsed_pose_data = None
+    if pose_data:
+        try:
+            parsed_pose_data = json.loads(pose_data)
+        except json.JSONDecodeError:
+            print("WARNING: Failed to parse pose_data JSON", flush=True)
+
+    temp_dir = "temp_uploads"
+    os.makedirs(temp_dir, exist_ok=True)
+    saved_paths = []
+
+    try:
+        for f in files:
+            safe_name = _sanitize_filename(f.filename)
+            ct = f.content_type
+            if not ct or ct == "application/octet-stream":
+                ct = mimetypes.guess_type(safe_name)[0] or "application/octet-stream"
+            if not ct.startswith("image/"):
+                raise HTTPException(status_code=400, detail=f"File '{f.filename}' is not an image.")
+
+            unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+            fpath = os.path.join(temp_dir, unique_name)
+            with open(fpath, "wb") as buffer:
+                shutil.copyfileobj(f.file, buffer)
+            saved_paths.append(fpath)
+
+        from services.food_analyzer import analyze_food_images_multi
+        result = analyze_food_images_multi(saved_paths, pose_data=parsed_pose_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="AR-enhanced multi-image analysis failed.")
     finally:
         for p in saved_paths:
             if os.path.exists(p):

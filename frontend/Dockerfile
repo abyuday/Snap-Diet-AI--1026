@@ -25,7 +25,7 @@ COPY . .
 
 # Run build
 RUN flutter pub upgrade
-RUN flutter build web --release
+RUN flutter build web --release || (flutter analyze && exit 1)
 
 # Final Stage: Use lightweight nginx to serve the build
 FROM nginx:alpine

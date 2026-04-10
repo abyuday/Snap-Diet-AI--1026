@@ -14,7 +14,10 @@ class AnalysisScreen extends StatefulWidget {
   /// Multi-image support (preferred)
   final List<XFile>? imageFiles;
 
-  const AnalysisScreen({super.key, this.imageFile, this.imageFiles})
+  /// AR pose data captured per image (Phase 2+)
+  final List<Map<String, dynamic>>? poseData;
+
+  const AnalysisScreen({super.key, this.imageFile, this.imageFiles, this.poseData})
       : assert(imageFile != null || imageFiles != null,
             'Either imageFile or imageFiles must be provided');
 
@@ -58,8 +61,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
       final NutritionResult result;
+      final poses = widget.poseData;
 
-      if (_allImages.length > 1) {
+      if (poses != null && poses.isNotEmpty) {
+        // AR-enhanced analysis with pose data
+        result = await apiService.analyzeWithPoseData(_allImages, poses);
+      } else if (_allImages.length > 1) {
         // Multi-image analysis
         result = await apiService.analyzeMultipleImages(_allImages);
       } else {
@@ -185,6 +192,40 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                       ],
                     ),
                   ),
+                  // AR Enhanced badge
+                  if (widget.poseData != null && widget.poseData!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF6366F1).withOpacity(0.2),
+                            const Color(0xFF8B5CF6).withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: const Color(0xFF6366F1).withOpacity(0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.view_in_ar_rounded,
+                              color: Color(0xFF8B5CF6), size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'AR Enhanced',
+                            style: TextStyle(
+                              color: Color(0xFF8B5CF6),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ] else ...[
                 const Icon(Icons.error_outline_rounded,

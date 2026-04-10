@@ -23,6 +23,8 @@ dependencies:
   cloud_firestore: any
   fl_chart: ^0.66.2
   flutter_markdown: any
+  sensors_plus: ^4.0.2
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:

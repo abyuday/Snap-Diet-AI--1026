@@ -70,6 +70,57 @@ class ApiService {
     }
   }
 
+  /// Analyze multiple food images WITH AR pose metadata via /analyze-ar endpoint.
+  /// [poseData] is a list of rotation/orientation dicts captured per image.
+  Future<NutritionResult> analyzeWithPoseData(
+      List<XFile> imageFiles, List<Map<String, dynamic>> poseData) async {
+    if (imageFiles.isEmpty) throw Exception('At least one image is required.');
+
+    // Fallback to standard multi if no pose data
+    if (poseData.isEmpty) return analyzeMultipleImages(imageFiles);
+
+    var request =
+        http.MultipartRequest('POST', Uri.parse('$baseUrl/analyze-ar'));
+
+    for (final imageFile in imageFiles) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'files',
+          await imageFile.readAsBytes(),
+          filename: imageFile.name,
+          contentType: MediaType.parse(
+              imageFile.name.endsWith('.png') ? 'image/png' : 'image/jpeg'),
+        ),
+      );
+    }
+
+    // Attach pose data as a JSON string field
+    request.fields['pose_data'] = jsonEncode(poseData);
+
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return NutritionResult.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to analyze with AR data: ${response.body}');
+    }
+  }
+
+  Future<NutritionResult> analyzeText(String query) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/analyze-text'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'query': query}),
+    );
+
+    if (response.statusCode == 200) {
+      return NutritionResult.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to analyze text: ${response.body}');
+    }
+  }
+
   Future<List<dynamic>> searchFoods(String query) async {
     final encoded = Uri.encodeQueryComponent(query);
     final response = await http.get(Uri.parse('$baseUrl/search?q=$encoded'));

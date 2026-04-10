@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import 'analysis_screen.dart';
 import 'multi_capture_screen.dart';
 import 'search_screen.dart';
+import 'manual_log_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -342,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen>
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const SearchScreen()),
+        MaterialPageRoute(builder: (_) => const ManualLogScreen()),
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

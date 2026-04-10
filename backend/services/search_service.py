@@ -35,21 +35,30 @@ def _get_emoji(name: str) -> str:
 
 def search_foods(query: str) -> List[Dict[str, Any]]:
     """
-    Searches for food items by name using the RAG vector store.
+    Searches for food items by exact name matching first, avoiding dirty vector similarities.
     """
     rag = get_rag_search()
-    if not rag.vector_db:
-        return []
-        
-    # Search for top 5 matches
-    docs = rag.vector_db.similarity_search(query, k=5)
     
+    # Use exact word search from CSV rather than fuzzy vector DB
+    matched_records = rag.search_all_by_keyword(query)
+    
+    if not matched_records and rag.vector_db:
+        # Fallback to vector search if totally unknown
+        try:
+            docs = rag.vector_db.similarity_search(query, k=5)
+            matched_records = []
+            for doc in docs:
+                matched_records.append(doc.metadata)
+        except Exception:
+            pass
+            
     results = []
-    for doc in docs:
-        meta = doc.metadata
+    seen = set()
+    for meta in matched_records:
         name = meta.get("name") or meta.get("food_name")
-        if not name:
+        if not name or name in seen:
             continue
+        seen.add(name)
         results.append({
             "name": str(name),
             "calories": float(meta.get("calories", 0)),

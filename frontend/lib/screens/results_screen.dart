@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,9 +10,9 @@ import '../services/history_provider.dart';
 
 class ResultsScreen extends StatefulWidget {
   final NutritionResult result;
-  final XFile imageFile;
+  final XFile? imageFile;
 
-  const ResultsScreen({super.key, required this.result, required this.imageFile});
+  const ResultsScreen({super.key, required this.result, this.imageFile});
 
   @override
   State<ResultsScreen> createState() => _ResultsScreenState();
@@ -42,7 +41,8 @@ class _ResultsScreenState extends State<ResultsScreen>
   }
 
   Future<void> _loadBytes() async {
-    final bytes = await widget.imageFile.readAsBytes();
+    if (widget.imageFile == null) return;
+    final bytes = await widget.imageFile!.readAsBytes();
     if (mounted) {
       setState(() => _imageBytes = bytes);
     }
@@ -66,7 +66,9 @@ class _ResultsScreenState extends State<ResultsScreen>
             width: double.infinity,
             child: _imageBytes != null 
                 ? Image.memory(_imageBytes!, fit: BoxFit.cover)
-                : const Center(child: CircularProgressIndicator()),
+                : widget.imageFile == null
+                    ? Container(color: AppTheme.surfaceColor)
+                    : const Center(child: CircularProgressIndicator()),
           ),
           // Dark gradient overlay over the image
           Container(
@@ -188,6 +190,47 @@ class _ResultsScreenState extends State<ResultsScreen>
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          // AR + Volume badges
+                          if (widget.result.rawData != null) ...[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (widget.result.rawData!['ar_enhanced'] == true)
+                                  _InfoChip(
+                                    icon: Icons.view_in_ar_rounded,
+                                    label: 'AR Enhanced',
+                                    gradient: const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                  ),
+                                if (widget.result.rawData!['volume_cm3'] != null)
+                                  _InfoChip(
+                                    icon: Icons.threed_rotation_rounded,
+                                    label: '${(widget.result.rawData!['volume_cm3'] as num).toStringAsFixed(0)} cm³',
+                                    gradient: const [Color(0xFF06B6D4), Color(0xFF0891B2)],
+                                  ),
+                                if (widget.result.rawData!['volume_method'] != null)
+                                  _InfoChip(
+                                    icon: Icons.layers_rounded,
+                                    label: widget.result.rawData!['volume_method'] == 'dpt_depth_multi'
+                                        ? 'Multi-View Depth'
+                                        : widget.result.rawData!['volume_method'] == 'dpt_depth'
+                                            ? 'Depth Map'
+                                            : 'Heuristic',
+                                    gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                                  ),
+                                if (widget.result.rawData!['pose_quality'] != null)
+                                  _InfoChip(
+                                    icon: Icons.insights_rounded,
+                                    label: 'Pose: ${widget.result.rawData!['pose_quality']}',
+                                    gradient: widget.result.rawData!['pose_quality'] == 'high'
+                                        ? const [Color(0xFF4ADE80), Color(0xFF22C55E)]
+                                        : const [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                           const SizedBox(height: 28),
                           // Macro grid
                           Text(
@@ -525,6 +568,47 @@ class _MicroNutrientRow extends StatelessWidget {
         children: [
           Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 15)),
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final List<Color> gradient;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.gradient,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [gradient[0].withOpacity(0.2), gradient[1].withOpacity(0.1)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: gradient[0].withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: gradient[0], size: 15),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: gradient[0],
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

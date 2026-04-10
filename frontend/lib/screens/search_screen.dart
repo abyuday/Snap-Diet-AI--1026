@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../models/nutrition_result.dart';
 import '../services/api_service.dart';
 import '../services/history_provider.dart';
 import '../theme/app_theme.dart';
+import 'results_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -138,22 +140,65 @@ class _SearchTile extends StatelessWidget {
         subtitle: Text('${item['calories']} kcal per serving', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
         trailing: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.primaryColor),
         onTap: () {
-          final historyProvider = Provider.of<HistoryProvider>(context, listen: false);
-          final result = NutritionResult(
-            foodName: item['name'],
-            portionSize: 'Standard',
-            calories: item['calories'].toDouble(),
-            protein: item['protein'].toDouble(),
-            carbs: item['carbs'].toDouble(),
-            fat: item['fat'].toDouble(),
-          );
-          historyProvider.addEntry(result, '');
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('✅ Added ${item['name']} to log')),
-          );
+          _showQuantityDialog(context);
         },
       ),
+    );
+  }
+
+  void _showQuantityDialog(BuildContext context) {
+    final TextEditingController quantityController = TextEditingController(text: '1.0');
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surfaceColor,
+          title: const Text('Enter Quantity', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: quantityController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'e.g. 1.0 for standard serving, 2 for double',
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () {
+                final double multiplier = double.tryParse(quantityController.text) ?? 1.0;
+                Navigator.pop(context); // Close dialog
+                
+                final result = NutritionResult(
+                  foodName: item['name'],
+                  portionSize: '${multiplier}x Standard Serving',
+                  calories: item['calories'].toDouble() * multiplier,
+                  protein: item['protein'].toDouble() * multiplier,
+                  carbs: item['carbs'].toDouble() * multiplier,
+                  fat: item['fat'].toDouble() * multiplier,
+                  rawData: {
+                    'engine': 'Manual Search Override',
+                    'confidence': 1.0,
+                    'grounded_weight': true,
+                    'methodology': 'Manual Selection'
+                  }
+                );
+                
+                // Close search screen and push ResultsScreen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => ResultsScreen(result: result, imageFile: null)),
+                );
+              },
+              child: const Text('Analyze', style: TextStyle(color: AppTheme.primaryColor)),
+            ),
+          ],
+        );
+      },
     );
   }
 }
