@@ -150,7 +150,12 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      // Ensure all Phase 2 keys exist with safe defaults
+      decoded.putIfAbsent('recipes', () => []);
+      decoded.putIfAbsent('logged_foods', () => []);
+      decoded.putIfAbsent('recommendations', () => []);
+      return decoded;
     } else {
       throw Exception('Failed to get chat response: ${response.body}');
     }

@@ -333,7 +333,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                                 child: ElevatedButton.icon(
                                   onPressed: () {
                                     final historyProvider = Provider.of<HistoryProvider>(context, listen: false);
-                                    historyProvider.addEntry(widget.result, widget.imageFile.path);
+                                    historyProvider.addEntry(widget.result, widget.imageFile?.path ?? '');
                                     
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(

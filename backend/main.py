@@ -9,6 +9,7 @@ import uuid
 import re
 from typing import Optional, List
 from dotenv import load_dotenv
+from services.cache_service import cache, TTL_SEARCH, TTL_CHAT, TTL_BARCODE
 
 # Load environment variables from .env
 load_dotenv()
@@ -55,6 +56,15 @@ class SearchResult(BaseModel):
     carbs: float
     fat: float
     emoji: str
+    fiber_g: Optional[float] = 0.0
+    sugar_g: Optional[float] = 0.0
+    sodium_mg: Optional[float] = 0.0
+    potassium_mg: Optional[float] = 0.0
+    vitamin_a_mcg: Optional[float] = 0.0
+    vitamin_c_mg: Optional[float] = 0.0
+    calcium_mg: Optional[float] = 0.0
+    iron_mg: Optional[float] = 0.0
+    standard_portion_grams: Optional[float] = 0.0
 
 class ChatRequest(BaseModel):
     message: str
@@ -65,6 +75,56 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     recommendations: List[dict]
+    recipes: Optional[List[dict]] = []
+    logged_foods: Optional[List[dict]] = []
+
+import threading
+
+def _warmup_services():
+    """Import heavy models in background after server binds to port."""
+    try:
+        print("INFO: Starting background warmup of heavy ML services...", flush=True)
+        # 1. Warm up RAG and Food database
+        from services.rag_service import get_rag_service
+        get_rag_service()
+        
+        # 2. Warm up Volume Service (Depth model)
+        from services.volume_service import _load_depth_model
+        _load_depth_model()
+        
+        # 3. Warm up VLM Client and local analyzer bits
+        from services.food_analyzer import get_local_classifier, _client, _AI_MODEL
+        get_local_classifier()
+        if _client:
+             try:
+                 print(f"INFO: Waking up Cloud VLM ({_AI_MODEL})...", flush=True)
+                 _client.chat.completions.create(
+                     model=_AI_MODEL,
+                     messages=[{"role": "user", "content": "ping"}],
+                     max_tokens=1,
+                     timeout=5.0
+                 )
+             except Exception:
+                 pass
+
+        # 4. Warm up YOLO detector
+        from services.yolo_service import get_yolo_model
+        get_yolo_model()
+        
+        print("INFO: Background warmup complete. All heavy services pre-loaded.", flush=True)
+    except Exception as e:
+        print(f"WARNING: Background warmup failed: {e}", flush=True)
+
+@app.on_event("startup")
+async def startup_event():
+    # Connect Redis cache first (non-blocking, degrades gracefully)
+    await cache.connect()
+    # Then warm up heavy ML models in background
+    threading.Thread(target=_warmup_services, daemon=True).start()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await cache.close()
 
 @app.get("/")
 def read_root():
@@ -73,10 +133,81 @@ def read_root():
 @app.get("/search", response_model=List[SearchResult])
 async def search(q: str):
     """
-    Search for food items by name.
+    Search for food items by name. Results are cached in Redis for 1 hour.
     """
+    cache_key = cache.make_key("search", {"q": q.lower().strip()})
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     from services.search_service import search_foods
-    return search_foods(q)
+    results = search_foods(q)
+    await cache.set(cache_key, results, TTL_SEARCH)
+    return results
+
+@app.get("/analyze-barcode", response_model=NutritionResponse)
+async def analyze_barcode(barcode: str):
+    """
+    Look up a food item by barcode via OpenFoodFacts, returning full nutrition data.
+    Results are cached in Redis for 24 hours (product data rarely changes).
+    Endpoint: GET /analyze-barcode?barcode=<EAN13>
+    """
+    cache_key = cache.make_key("barcode", {"barcode": barcode})
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    import httpx
+    url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url)
+        data = resp.json()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"OpenFoodFacts unreachable: {exc}")
+
+    if data.get("status") != 1 or "product" not in data:
+        raise HTTPException(status_code=404, detail="Barcode not found in OpenFoodFacts database.")
+
+    product = data["product"]
+    nutrients = product.get("nutriments", {})
+    food_name = (
+        product.get("product_name_en")
+        or product.get("product_name")
+        or product.get("generic_name")
+        or "Unknown Product"
+    )
+
+    def _n(key: str, fallback: float = 0.0) -> float:
+        # OpenFoodFacts uses _100g suffix for per-100g values
+        return float(nutrients.get(f"{key}_100g", nutrients.get(key, fallback)) or fallback)
+
+    result = NutritionResponse(
+        food_name=food_name,
+        portion_size="100g",
+        estimated_weight_grams=100.0,
+        calories=_n("energy-kcal"),
+        protein=_n("proteins"),
+        carbs=_n("carbohydrates"),
+        fat=_n("fat"),
+        fiber_g=_n("fiber"),
+        sugar_g=_n("sugars"),
+        sodium_mg=_n("sodium") * 1000,
+        potassium_mg=_n("potassium") * 1000,
+        vitamin_a_mcg=_n("vitamin-a", 0.0),
+        vitamin_c_mg=_n("vitamin-c", 0.0),
+        calcium_mg=_n("calcium") * 1000,
+        iron_mg=_n("iron") * 1000,
+        raw_data={
+            "barcode": barcode,
+            "source": "OpenFoodFacts",
+            "brand": product.get("brands", ""),
+            "image_url": product.get("image_url", ""),
+        }
+    )
+    await cache.set(cache_key, result.dict(), TTL_BARCODE)
+    return result
+
 
 def _sanitize_filename(filename: Optional[str]) -> str:
     """Safe filename to prevent path traversal. Falls back to UUID if invalid."""
@@ -285,15 +416,60 @@ def analyze_food_ar(files: List[UploadFile] = File(...), pose_data: Optional[str
 async def chat_with_ai(request: ChatRequest):
     """
     Interactive dietitian chat endpoint.
+    Identical questions (same message text, same goals) are cached for 15 minutes.
+    Personalized history is NOT part of the cache key to avoid stale responses.
     """
     try:
+        # Cache key: message + goals only (history makes responses too unique)
+        cache_key = cache.make_key("chat", {
+            "msg": request.message.strip().lower(),
+            "cal_goal": request.goals.get("daily_calories", 2000),
+            "prot_goal": request.goals.get("protein_target", 50),
+        })
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         from services.chat_service import get_chat_response
         response = get_chat_response(
-            request.message, 
-            request.profile, 
-            request.history, 
+            request.message,
+            request.profile,
+            request.history,
             request.goals
         )
+
+        # Only cache standard advice (not recipe/logging responses which are unique)
+        if not response.get("recipes") and not response.get("logged_foods"):
+            await cache.set(cache_key, response, TTL_CHAT)
+
         return response
-    except Exception:
-        raise HTTPException(status_code=500, detail="Chat request failed.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat request failed: {str(e)}")
+
+
+@app.get("/cache/stats")
+async def cache_stats():
+    """Admin endpoint: Redis cache availability and basic info."""
+    if not cache.is_available:
+        return {"status": "unavailable", "message": "Redis is not connected"}
+    try:
+        import redis.asyncio as aioredis
+        client = aioredis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"),
+                                   decode_responses=True)
+        info = await client.info("stats")
+        keyspace = await client.info("keyspace")
+        await client.aclose()
+        return {
+            "status": "available",
+            "redis_url": os.getenv("REDIS_URL", "redis://localhost:6379"),
+            "total_commands_processed": info.get("total_commands_processed"),
+            "keyspace_hits": info.get("keyspace_hits"),
+            "keyspace_misses": info.get("keyspace_misses"),
+            "hit_rate": round(
+                info.get("keyspace_hits", 0) /
+                max(info.get("keyspace_hits", 0) + info.get("keyspace_misses", 1), 1) * 100, 1
+            ),
+            "keyspace": keyspace,
+        }
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}

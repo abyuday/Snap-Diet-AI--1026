@@ -9,6 +9,8 @@ chromadb
 pandas
 numpy
 requests
+httpx
+redis[hiredis]
 inflect
 torch
 torchvision

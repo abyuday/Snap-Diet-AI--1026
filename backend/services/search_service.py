@@ -23,7 +23,27 @@ EMOJI_MAP = {
     "pasta": "🍝",
     "salad": "🥗",
     "salmon": "🐟",
-    "fish": "🐟"
+    "fish": "🐟",
+    "biryani": "🍗",
+    "idli": "🫓",
+    "dosa": "🥞",
+    "roti": "🫓",
+    "paneer": "🧀",
+    "dal": "🍲",
+    "samosa": "🥟",
+    "curry": "🍛",
+    "soup": "🍜",
+    "bread": "🍞",
+    "butter": "🧈",
+    "curd": "🥛",
+    "yogurt": "🥛",
+    "coffee": "☕",
+    "tea": "🍵",
+    "juice": "🧃",
+    "mango": "🥭",
+    "orange": "🍊",
+    "watermelon": "🍉",
+    "grape": "🍇"
 }
 
 def _get_emoji(name: str) -> str:
@@ -65,6 +85,15 @@ def search_foods(query: str) -> List[Dict[str, Any]]:
             "protein": float(meta.get("protein", 0)),
             "carbs": float(meta.get("carbs", 0)),
             "fat": float(meta.get("fat", 0)),
+            "fiber_g": float(meta.get("fiber_g", 0)),
+            "sugar_g": float(meta.get("sugar_g", 0)),
+            "sodium_mg": float(meta.get("sodium_mg", 0)),
+            "potassium_mg": float(meta.get("potassium_mg", 0)),
+            "vitamin_a_mcg": float(meta.get("vitamin_a_mcg", 0)),
+            "vitamin_c_mg": float(meta.get("vitamin_c_mg", 0)),
+            "calcium_mg": float(meta.get("calcium_mg", 0)),
+            "iron_mg": float(meta.get("iron_mg", 0)),
+            "standard_portion_grams": float(meta.get("standard_portion_grams", 0) or 0),
             "emoji": _get_emoji(str(name))
         })
     return results

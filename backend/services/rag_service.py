@@ -149,18 +149,7 @@ class RAGService:
         # -----------------------------------------------------------
         # 1. Base FNDDS Data (Western/Global) with portion weights
         # -----------------------------------------------------------
-        base_data = [
-            {"code": "11111111", "name": "Milk, whole",       "calories": 61,  "protein": 3.15, "carbs": 4.8,  "fat": 3.25, "portion_grams": 244, "portion_unit": "1 cup"},
-            {"code": "11111211", "name": "Milk, reduced fat",  "calories": 50,  "protein": 3.3,  "carbs": 4.8,  "fat": 1.99, "portion_grams": 244, "portion_unit": "1 cup"},
-            {"code": "53108200", "name": "Pizza",              "calories": 266, "protein": 11.4, "carbs": 33.3, "fat": 9.7,  "portion_grams": 107, "portion_unit": "1 slice"},
-            {"code": "23111000", "name": "Beef Steak",         "calories": 204, "protein": 30.2, "carbs": 0,    "fat": 8.5,  "portion_grams": 170, "portion_unit": "1 piece"},
-            {"code": "72101100", "name": "Rice, white",        "calories": 130, "protein": 2.7,  "carbs": 28.2, "fat": 0.3,  "portion_grams": 186, "portion_unit": "1 cup"},
-            {"code": "24101000", "name": "Chicken breast",     "calories": 165, "protein": 31,   "carbs": 0,    "fat": 3.6,  "portion_grams": 172, "portion_unit": "1 piece"},
-            {"code": "41101010", "name": "Apple",              "calories": 52,  "protein": 0.26, "carbs": 13.8, "fat": 0.17, "portion_grams": 182, "portion_unit": "1 piece"},
-            {"code": "41101020", "name": "Banana",             "calories": 89,  "protein": 1.09, "carbs": 22.8, "fat": 0.33, "portion_grams": 118, "portion_unit": "1 piece"},
-            {"code": "11111100", "name": "Egg",                "calories": 155, "protein": 12.6, "carbs": 1.1,  "fat": 10.6, "portion_grams": 50,  "portion_unit": "1 piece"},
-            {"code": "73101010", "name": "Spaghetti",          "calories": 158, "protein": 5.8,  "carbs": 30.9, "fat": 0.9,  "portion_grams": 140, "portion_unit": "1 cup"},
-        ]
+        base_data = []
         
         docs = []
         for item in base_data:
@@ -465,7 +454,13 @@ class RAGService:
         if portion_info and portion_info["standard_portion_grams"] > 0:
             # GROUNDED estimation: use database portion weights
             std_grams = portion_info["standard_portion_grams"]
-            estimated_weight = round(portion_count * std_grams, 1)
+            
+            # Catch raw gram inputs (e.g. "550 grams")
+            desc_lower = (portion_description or "").lower()
+            if "gram" in desc_lower or " g " in f" {desc_lower} " or desc_lower.endswith("g") or desc_lower.endswith("gms"):
+                estimated_weight = round(portion_count, 1)
+            else:
+                estimated_weight = round(portion_count * std_grams, 1)
 
             return {
                 "food_name": portion_info["food_name"],
@@ -579,16 +574,18 @@ class RAGService:
         actual_weight_grams: float
     ) -> Dict[str, Any]:
         """
-        Scale nutrition values from per-standard-portion to actual weight.
-
-        If CSV says "Idli: 58 cal per 40g (1 piece)" and VLM sees "3 pieces" (120g),
-        scaled calories = 58 × (120 / 40) = 174 kcal.
+        Scale nutrition values. 
+        Most food databases (FNDDS, IFCT) provide values PER 100g.
+        
+        If CSV says "Biryani: 190 cal" (implicitly per 100g) and VLM sees 500g,
+        scaled calories = 190 * (500 / 100) = 950 kcal.
         """
-        if standard_portion_grams <= 0 or actual_weight_grams <= 0:
+        if actual_weight_grams <= 0:
             return nutrition
 
-        ratio = actual_weight_grams / standard_portion_grams
-        scaled = dict(nutrition)  # shallow copy
+        # We assume nutrient values in our database are PER 100g
+        ratio = actual_weight_grams / 100.0
+        scaled = dict(nutrition)
 
         nutrient_keys = [
             "calories", "protein", "carbs", "fat",

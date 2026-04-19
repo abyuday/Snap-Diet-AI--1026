@@ -32,10 +32,10 @@ def _load_depth_model():
 
     try:
         from transformers import pipeline
-        print("INFO: [Volume] Loading DPT depth estimation model...", flush=True)
+        print("INFO: [Volume] Loading DPT-Hybrid depth estimation model...", flush=True)
         _depth_pipeline = pipeline(
             "depth-estimation",
-            model="Intel/dpt-large",
+            model="Intel/dpt-hybrid-midas",
             device=-1,  # CPU (use 0 for GPU)
         )
         _depth_available = True

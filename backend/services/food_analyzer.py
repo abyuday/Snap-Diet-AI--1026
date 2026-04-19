@@ -27,14 +27,19 @@ _HF_TOKEN = os.getenv("HF_TOKEN")
 _OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 _AI_BASE_URL = os.getenv("AI_BASE_URL", "https://router.huggingface.co/v1")
 _AI_MODEL = os.getenv("AI_MODEL", "Qwen/Qwen2.5-VL-72B-Instruct")
+if "llama" in _AI_MODEL.lower():
+    _AI_MODEL = "Qwen/Qwen2.5-VL-72B-Instruct"
 
 _client: Optional[OpenAI] = None
+print(f"DEBUG: HF_TOKEN present: {bool(_HF_TOKEN)}", flush=True)
 if _HF_TOKEN or _OPENAI_API_KEY:
     try:
         _client = OpenAI(api_key=_HF_TOKEN or _OPENAI_API_KEY, base_url=_AI_BASE_URL)
-        print(f"INFO: Cloud VLM Client initialized with model {_AI_MODEL}", flush=True)
+        print(f"INFO: Cloud VLM Client initialized with model {_AI_MODEL} using base {_AI_BASE_URL}", flush=True)
     except Exception as e:
         print(f"WARNING: Failed to init Cloud VLM client: {e}", flush=True)
+else:
+    print("WARNING: No HF_TOKEN or OPENAI_API_KEY found. Cloud VLM will be disabled.", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -193,20 +198,20 @@ def _parse_vlm_json(raw_text: str) -> Optional[Dict[str, Any]]:
 
 _SINGLE_IMAGE_PROMPT = """You are a food analysis expert performing dietary assessment.
 
-Analyze this food image and identify the dish. Describe the portion using STANDARD portion descriptors.
+Analyze the food in this image. This is a GLOBAL food analysis tool — identify Western dishes (Burgers, Pizza, Pasta, Fries, Steaks, Sushi), Indian dishes, and others.
 
-IMPORTANT: Do NOT guess the weight in grams. Instead, describe the portion using countable units:
-- For discrete items (idli, samosa, roti): count the pieces (e.g., "3 pieces")
-- For served dishes (biryani, curry): use serving containers (e.g., "1 plate", "1 bowl")
-- For drinks: use glass/cup (e.g., "1 glass")
+IMPORTANT: RETURN ONLY A JSON OBJECT. DO NOT ESTIMATE WEIGHT IN GRAMS. Use portion counts.
+- Discrete items: "1 burger", "2 pieces", "3 tacos"
+- Served dishes: "1 plate", "1 bowl", "1 medium portion"
+- Drinks: "1 glass", "1 cup"
 
-Return ONLY a JSON object in this exact format (no extra text):
-{"food": "<dish name>", "portion_description": "<e.g. 3 pieces, 1 bowl, 1 plate>", "confidence_note": "<brief reason for identification>"}
+JSON Format:
+{"food": "<dish name>", "portion_description": "<portion size>", "confidence_note": "<brief detail>"}
 
 Examples:
-{"food": "Idli", "portion_description": "3 pieces", "confidence_note": "Round white steamed rice cakes visible"}
-{"food": "Chicken Biryani", "portion_description": "1 plate", "confidence_note": "Yellow rice with chicken pieces and garnish"}
-{"food": "Masala Dosa", "portion_description": "1 piece", "confidence_note": "Golden crispy crepe folded with filling"}"""
+{"food": "Burger", "portion_description": "1 piece", "confidence_note": "Sesame bun with patty and lettuce"}
+{"food": "Idli", "portion_description": "3 pieces", "confidence_note": "Round white steamed cakes"}
+{"food": "Pepperoni Pizza", "portion_description": "2 slices", "confidence_note": "Triangular slices with red meat circles"}"""
 
 
 _MULTI_IMAGE_PROMPT = """You are a food analysis expert. You have multiple images of the SAME dish from different angles.
@@ -253,15 +258,21 @@ def predict_food(image_path: str) -> Dict[str, Any]:
     vit_prediction = _get_vit_prediction(image_path)
 
     # Stage 1: Cloud VLM identification
+    print(f"DEBUG: VLM Client initialized: {bool(_client)} (Model: {_AI_MODEL})", flush=True)
     if _client:
+        print(f"DEBUG: Calling _call_vlm_single for {image_path}", flush=True)
         vlm_result = _call_vlm_single(image_path)
+        print(f"DEBUG: VLM Result: {bool(vlm_result)}", flush=True)
         if vlm_result:
             return _ground_prediction(vlm_result, vit_prediction)
+    else:
+        print("DEBUG: _client is NONE - check HF_TOKEN in .env", flush=True)
 
     # Stage 2: Fallback to local ViT model alone
     if vit_prediction:
         return _ground_prediction(vit_prediction, None)
 
+    print("DEBUG: Falling back to _empty_prediction", flush=True)
     return _empty_prediction()
 
 
@@ -358,8 +369,24 @@ def _call_vlm_single(image_path: str) -> Optional[Dict[str, Any]]:
             prompt += f"\n\nHint: Object detection identified multiple items: {', '.join(detected_items)}. If this is a mixed plate (like a Thali), provide an aggregated name representing the whole meal and sum the overall portion (e.g. '1 large mixed plate')."
 
         print(f"INFO: [Stage 1] Calling Cloud VLM for {os.path.basename(final_img_path)}...", flush=True)
-        with open(final_img_path, "rb") as f:
-            base64_image = base64.b64encode(f.read()).decode("utf-8")
+        
+        # Resize image for VLM to reduce payload/token count and improve reliability
+        from PIL import Image
+        import io
+        try:
+            with Image.open(final_img_path) as img:
+                h, w = img.size[1], img.size[0]
+                max_dim = 1024
+                if max(h, w) > max_dim:
+                    img.thumbnail((max_dim, max_dim))
+                
+                buffered = io.BytesIO()
+                img.save(buffered, format="JPEG", quality=85)
+                base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        except Exception as e:
+            print(f"WARNING: PIL resize failed: {e}. Falling back to raw file.", flush=True)
+            with open(final_img_path, "rb") as f:
+                base64_image = base64.b64encode(f.read()).decode("utf-8")
 
         response = _client.chat.completions.create(
             model=_AI_MODEL,
@@ -370,8 +397,8 @@ def _call_vlm_single(image_path: str) -> Optional[Dict[str, Any]]:
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
                 ],
             }],
-            max_tokens=200,
-            timeout=15.0,
+            max_tokens=250,
+            timeout=30.0,
         )
 
         raw = response.choices[0].message.content.strip()
@@ -400,6 +427,13 @@ def _call_vlm_single(image_path: str) -> Optional[Dict[str, Any]]:
 
     except Exception as e:
         print(f"WARNING: [Stage 1] VLM failed: {e}", flush=True)
+        return {
+            "food": "Analysis Failed",
+            "portion_description": "N/A",
+            "confidence_note": f"Cloud VLM Error: {str(e)}",
+            "confidence": 0.0,
+            "engine": f"Cloud VLM Error ({_AI_MODEL})",
+        }
 
     return None
 
@@ -424,9 +458,24 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
             prompt += f"\n\nHint: Object detection across these images identified multiple items: {', '.join(all_detected)}. If this is a mixed plate (like a Thali), provide an aggregated name representing the whole meal and sum the overall portion (e.g. '1 large mixed plate')."
 
         content_parts = [{"type": "text", "text": prompt}]
+        from PIL import Image
+        import io
         for i, img_path in enumerate(final_image_paths):
-            with open(img_path, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode("utf-8")
+            try:
+                with Image.open(img_path) as img:
+                    h, w = img.size[1], img.size[0]
+                    max_dim = 800
+                    if max(h, w) > max_dim:
+                        img.thumbnail((max_dim, max_dim))
+                    
+                    buffered = io.BytesIO()
+                    img.save(buffered, format="JPEG", quality=80)
+                    b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            except Exception as e:
+                print(f"WARNING: PIL multi-resize failed: {e}. Falling back to raw file.", flush=True)
+                with open(img_path, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("utf-8")
+            
             content_parts.append({
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
@@ -436,8 +485,8 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
         response = _client.chat.completions.create(
             model=_AI_MODEL,
             messages=[{"role": "user", "content": content_parts}],
-            max_tokens=200,
-            timeout=25.0,
+            max_tokens=250,
+            timeout=35.0,
         )
 
         raw = response.choices[0].message.content.strip()
@@ -455,6 +504,13 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
 
     except Exception as e:
         print(f"WARNING: [Stage 1] Multi-VLM failed: {e}", flush=True)
+        return {
+            "food": "Analysis Failed",
+            "portion_description": "N/A",
+            "confidence_note": f"Cloud VLM Error: {str(e)}",
+            "confidence": 0.0,
+            "engine": f"Cloud VLM Error ({_AI_MODEL})",
+        }
 
     return None
 
@@ -562,7 +618,12 @@ def _ground_prediction(
         elif grounded:
             print(f"INFO: [Stage 3] Grounded weight: {weight_grams}g (no nutrition to scale)", flush=True)
         else:
-            print(f"INFO: [Stage 3] Ungrounded - no portion data in DB for '{food_name}'", flush=True)
+            # Fallback: If not grounded, use the standard_portion_grams from the CSV info if available
+            if nutrition and nutrition.get("standard_portion_grams"):
+                weight_grams = nutrition["standard_portion_grams"]
+                print(f"INFO: [Stage 3] Ungrounded - falling back to CSV standard weight: {weight_grams}g", flush=True)
+            else:
+                print(f"INFO: [Stage 3] Ungrounded - no portion data in DB or CSV for '{food_name}'", flush=True)
 
     except Exception as e:
         print(f"WARNING: [Stage 3] Portion grounding failed: {e}", flush=True)

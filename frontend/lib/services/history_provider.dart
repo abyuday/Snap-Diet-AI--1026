@@ -21,7 +21,7 @@ class HistoryEntry {
     required this.carbs,
     required this.fat,
     required this.emoji,
-    required this.imagePath,
+    this.imagePath = '',
   });
 
   String get formattedDate => "${dateTime.day}/${dateTime.month}/${dateTime.year}";

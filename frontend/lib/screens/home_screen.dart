@@ -9,7 +9,7 @@ import '../theme/app_theme.dart';
 import 'analysis_screen.dart';
 import 'multi_capture_screen.dart';
 import 'search_screen.dart';
-import 'manual_log_screen.dart';
+import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -130,18 +130,20 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildChatCard(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // Switch to Chat Tab (Index 1 in MainShell)
-        // We look for the Scaffold that contains the MainShell's state if possible,
-        // or just let the user use the bottom nav.
-        // For now, this is a visual enticement.
-      },
+      onTap: () => _showAdviceSheet(context),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.primaryColor.withOpacity(0.08),
+          gradient: LinearGradient(
+            colors: [
+              AppTheme.primaryColor.withOpacity(0.14),
+              AppTheme.primaryColor.withOpacity(0.05),
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.25)),
         ),
         child: Row(
           children: [
@@ -151,7 +153,8 @@ class _HomeScreenState extends State<HomeScreen>
                 color: AppTheme.primaryColor.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryColor, size: 28),
+              child: const Icon(Icons.auto_awesome_rounded,
+                  color: AppTheme.primaryColor, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -159,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Need diet advice?",
+                    'Need diet advice?',
                     style: GoogleFonts.outfit(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -167,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   Text(
-                    "Ask me anything about your Indian food goals!",
+                    'Tap for personalised tips based on your habits',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.6),
                       fontSize: 13,
@@ -176,12 +179,288 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.primaryColor, size: 20),
+            ),
           ],
         ),
       ),
     );
   }
+
+  void _showAdviceSheet(BuildContext context) {
+    final history = Provider.of<HistoryProvider>(context, listen: false);
+    final calToday = history.totalToday;
+    final protToday = history.totalProteinToday;
+    final carbsToday = history.totalCarbsToday;
+    final fatToday = history.totalFatToday;
+    final scanCount = history.history.length;
+
+    // Generate personalised tips from actual data
+    final tips = _buildPersonalisedTips(calToday, protToday, carbsToday, fatToday, scanCount);
+
+    // Smart chat prompts
+    final prompts = [
+      '💪 How can I increase my protein intake with Indian food?',
+      '🥗 What are some healthy low-calorie Indian snacks?',
+      '🍳 Give me a healthy high-protein breakfast recipe',
+      '🌙 What should I eat for dinner to lose weight?',
+      '💧 How much water should I drink daily?',
+      '🫚 What healthy fats should I include in my Indian diet?',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.auto_awesome_rounded,
+                              color: AppTheme.primaryColor, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Your Diet Advice',
+                                style: GoogleFonts.outfit(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                            Text('Personalised from your food history',
+                                style: TextStyle(color: Colors.white38, fontSize: 12)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Today's snapshot
+                    if (scanCount > 0) ...[
+                      _sheetSectionTitle('📊 Today\'s Snapshot'),
+                      const SizedBox(height: 12),
+                      _todayStatsRow(calToday, protToday, carbsToday, fatToday),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Personalised tips
+                    _sheetSectionTitle('💡 Personalised Tips'),
+                    const SizedBox(height: 12),
+                    ...tips.map((tip) => _TipCard(tip: tip)),
+                    const SizedBox(height: 24),
+
+                    // Ask AI section
+                    _sheetSectionTitle('🤖 Ask the AI Dietitian'),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Tap any question to get an instant AI answer:',
+                      style: TextStyle(color: Colors.white54, fontSize: 13),
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: prompts.map((p) => _PromptChip(
+                        label: p,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToChatWithPrompt(context, p);
+                        },
+                      )).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Map<String, String>> _buildPersonalisedTips(
+      double cal, double prot, double carbs, double fat, int scans) {
+    final tips = <Map<String, String>>[];
+
+    if (scans == 0) {
+      tips.add({
+        'icon': '🍱',
+        'title': 'Start Logging Meals',
+        'body':
+            'Log your first meal today! Snap a photo or search manually — the more you log, the better your personalised advice gets.',
+      });
+      tips.add({
+        'icon': '🥗',
+        'title': 'Balanced Indian Plate',
+        'body':
+            'A balanced Indian meal should include 50% vegetables, 25% whole grains (roti/brown rice), and 25% protein (dal, paneer, chicken).',
+      });
+      tips.add({
+        'icon': '💧',
+        'title': 'Start Your Day Right',
+        'body':
+            'Drink 1–2 glasses of warm water in the morning before eating. It boosts metabolism and aids digestion throughout the day.',
+      });
+    } else {
+      if (prot < 50) {
+        tips.add({
+          'icon': '🥚',
+          'title': 'Boost Your Protein!',
+          'body':
+              'You\'ve only had ${prot.toInt()}g of protein today. Try adding eggs, paneer, moong dal, or a handful of peanuts to your next meal.',
+        });
+      } else if (prot > 150) {
+        tips.add({
+          'icon': '✅',
+          'title': 'Great Protein Intake!',
+          'body':
+              'You\'re at ${prot.toInt()}g protein today — excellent! Make sure to stay hydrated and include fiber-rich vegetables to aid absorption.',
+        });
+      }
+
+      if (cal > 2200) {
+        tips.add({
+          'icon': '⚖️',
+          'title': 'Calorie Check',
+          'body':
+              'You\'ve consumed ${cal.toInt()} kcal today. For the rest of the day, stick to light foods like salads, chaas (buttermilk), or a small bowl of fruit.',
+        });
+      } else if (cal < 800 && scans > 0) {
+        tips.add({
+          'icon': '🍛',
+          'title': 'Don\'t Skip Meals!',
+          'body':
+              'Only ${cal.toInt()} kcal today — you need more fuel! Skipping meals slows your metabolism. Try a nutritious meal like dal khichdi or a protein smoothie.',
+        });
+      }
+
+      if (carbs > 300) {
+        tips.add({
+          'icon': '🌾',
+          'title': 'Watch the Carbs',
+          'body':
+              'Your carb intake is high (${carbs.toInt()}g). Swap white rice for brown rice, and maida rotis for whole wheat to slow glucose spikes.',
+        });
+      }
+
+      if (fat > 80) {
+        tips.add({
+          'icon': '🫒',
+          'title': 'Choose Healthy Fats',
+          'body':
+              'High fat day (${fat.toInt()}g). Prefer mustard oil or ghee in small quantities over refined oils. Avoid deep-fried snacks for the rest of today.',
+        });
+      }
+
+      // Always add 1 general good-habit tip
+      tips.add({
+        'icon': '🌙',
+        'title': 'Evening Habit Tip',
+        'body':
+            'Eat your last meal at least 2–3 hours before bedtime. It improves digestion and sleep quality. A light khichdi or dal soup is ideal.',
+      });
+    }
+
+    // Always cap at 4 tips max
+    return tips.take(4).toList();
+  }
+
+  Widget _sheetSectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.outfit(
+          fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+    );
+  }
+
+  Widget _todayStatsRow(double cal, double prot, double carbs, double fat) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _miniStat('${cal.toInt()}', 'kcal', AppTheme.primaryColor),
+          _vLine(),
+          _miniStat('${prot.toInt()}g', 'Protein', const Color(0xFF4FA3E0)),
+          _vLine(),
+          _miniStat('${carbs.toInt()}g', 'Carbs', const Color(0xFFFF9057)),
+          _vLine(),
+          _miniStat('${fat.toInt()}g', 'Fat', const Color(0xFFFF6B8A)),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat(String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(value,
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(label,
+            style: const TextStyle(color: Colors.white38, fontSize: 10)),
+      ],
+    );
+  }
+
+  Widget _vLine() =>
+      Container(width: 1, height: 28, color: Colors.white.withOpacity(0.08));
+
+  void _navigateToChatWithPrompt(BuildContext context, String prompt) {
+    // Navigate to tab index 2 (ChatScreen) in MainShell and pre-fill the prompt
+    // We use a shared approach via NavigatorState if available
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _PrefilledChatScreen(initialPrompt: prompt),
+      ),
+    );
+  }
+
+
 
   Widget _buildTopBar() {
     return Row(
@@ -343,7 +622,7 @@ class _HomeScreenState extends State<HomeScreen>
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const ManualLogScreen()),
+        MaterialPageRoute(builder: (_) => const SearchScreen()),
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -464,5 +743,102 @@ class _ScanButtonState extends State<_ScanButton>
         ),
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Tip card used inside the advice bottom sheet
+// ─────────────────────────────────────────────
+class _TipCard extends StatelessWidget {
+  final Map<String, String> tip;
+  const _TipCard({required this.tip});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(tip['icon'] ?? '💡', style: const TextStyle(fontSize: 26)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tip['title'] ?? '',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  tip['body'] ?? '',
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Tappable chip that pre-sends a prompt to AI
+// ─────────────────────────────────────────────
+class _PromptChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _PromptChip({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: AppTheme.primaryColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Opens ChatScreen with a pre-sent message
+// ─────────────────────────────────────────────
+class _PrefilledChatScreen extends StatelessWidget {
+  final String initialPrompt;
+  const _PrefilledChatScreen({required this.initialPrompt});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChatScreen(autoPrompt: initialPrompt);
   }
 }
