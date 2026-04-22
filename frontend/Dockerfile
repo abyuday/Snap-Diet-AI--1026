@@ -16,7 +16,7 @@ ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
 # Fix git ownership issues and initialize flutter
 RUN git config --global --add safe.directory '*' \
     && flutter config --enable-web \
-    && flutter precache
+    && flutter precache --web
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ COPY . .
 
 # Run build
 RUN flutter pub upgrade
-RUN flutter build web --release || (flutter analyze && exit 1)
+RUN flutter build web --release --base-href / --web-renderer html --verbose
 
 # Final Stage: Use lightweight nginx to serve the build
 FROM nginx:alpine

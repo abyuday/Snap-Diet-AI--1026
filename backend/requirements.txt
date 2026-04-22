@@ -23,3 +23,8 @@ Pillow
 ultralytics
 opencv-python-headless
 timm
+pyzbar
+motor
+passlib[bcrypt]
+python-jose[cryptography]
+email-validator

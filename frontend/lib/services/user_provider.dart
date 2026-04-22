@@ -1,113 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'database_helper.dart';
-import 'firestore_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 
 class UserProvider extends ChangeNotifier {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
-  final FirestoreService _firestore = FirestoreService();
-  
-  String? _userId;
-  String _name = 'Health Explorer';
-  String _rank = 'Nutrition Novice';
-  
-  // Daily Goals
-  int _calorieGoal = 2000;
-  int _proteinGoal = 120;
-  int _carbsGoal = 250;
-  int _fatGoal = 70;
-  int _waterGoal = 2500; // ml
-  
-  int _currentWater = 0;
+  final ApiService _api = ApiService();
 
-  UserProvider();
+  String? _token;
+  Map<String, dynamic>? _user;
 
-  void setUserId(String? uid) {
-    if (_userId != uid) {
-      _userId = uid;
-      if (uid != null) {
-        _loadUserData();
-      }
-    }
-  }
+  bool get isAuthenticated => _token != null;
 
-  String get _todayStr => DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String get name => _user?['name'] ?? 'Health Explorer';
+  String get email => _user?['email'] ?? '';
+  String get rank => _user?['rank'] ?? 'Nutrition Novice';
 
-  Future<void> _loadUserData() async {
-    if (_userId == null) return;
+  int get calorieGoal => _user?['goals']?['calorieGoal'] ?? 2000;
+  int get proteinGoal => _user?['goals']?['proteinGoal'] ?? 120;
+  int get carbsGoal => _user?['goals']?['carbsGoal'] ?? 250;
+  int get fatGoal => _user?['goals']?['fatGoal'] ?? 70;
+  int get waterGoal => _user?['goals']?['waterGoal'] ?? 2500;
 
-    // Load Local Water
-    _currentWater = await _dbHelper.getWaterForToday(_todayStr);
+  Future<void> tryAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!prefs.containsKey('userData')) return;
 
-    // Load Cloud Data (Goals & Water)
-    final profile = await _firestore.getUserProfile(_userId!);
-    if (profile.exists) {
-      final data = profile.data() as Map<String, dynamic>;
-      _name = data['name'] ?? _name;
-      _rank = data['rank'] ?? _rank;
-      _calorieGoal = data['calorieGoal'] ?? _calorieGoal;
-      _proteinGoal = data['proteinGoal'] ?? _proteinGoal;
-      _carbsGoal = data['carbsGoal'] ?? _carbsGoal;
-      _fatGoal = data['fatGoal'] ?? _fatGoal;
-      _waterGoal = data['waterGoal'] ?? _waterGoal;
-    }
+    final token = prefs.getString('token');
+    if (token == null) return;
 
-    // Load Water from Cloud for Today (as fallback or sync source)
-    final cloudWater = await _firestore.getWater(_userId!, _todayStr);
-    if (cloudWater.exists) {
-      int water = (cloudWater.data() as Map<String, dynamic>)['amount'] ?? 0;
-      if (water > _currentWater) {
-        _currentWater = water;
-        await _dbHelper.setWaterForToday(_todayStr, _currentWater);
-      }
-    }
+    _token = token;
+    ApiService.authToken = token;
 
+    // TODO: Verify token via /api/auth/me if desired. We will trust it here.
     notifyListeners();
   }
 
-  String get name => _name;
-  String get rank => _rank;
-  int get calorieGoal => _calorieGoal;
-  int get proteinGoal => _proteinGoal;
-  int get carbsGoal => _carbsGoal;
-  int get fatGoal => _fatGoal;
-  int get waterGoal => _waterGoal;
-  int get currentWater => _currentWater;
+  Future<void> login(String email, String password) async {
+    final response = await _api.login(email, password);
+    await _authenticateUser(response);
+  }
 
-  Future<void> addWater(int amount) async {
-    _currentWater += amount;
-    await _dbHelper.setWaterForToday(_todayStr, _currentWater);
-    if (_userId != null) {
-      await _firestore.saveWater(_userId!, _todayStr, _currentWater);
-    }
+  Future<void> signup(String name, String email, String password, int cal, int prot, int carbs, int fat) async {
+    final response = await _api.signup(name, email, password, cal, prot, carbs, fat);
+    await _authenticateUser(response);
+  }
+
+  Future<void> _authenticateUser(Map<String, dynamic> responseData) async {
+    _token = responseData['access_token'];
+    _user = responseData['user'];
+    ApiService.authToken = _token;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', _token!);
+    await prefs.setString('userData', 'exists'); // simplistic flag
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    _token = null;
+    _user = null;
+    ApiService.authToken = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('userData');
     notifyListeners();
   }
 
   Future<void> updateGoals({int? calories, int? protein, int? carbs, int? fat, int? water}) async {
-    if (calories != null) _calorieGoal = calories;
-    if (protein != null) _proteinGoal = protein;
-    if (carbs != null) _carbsGoal = carbs;
-    if (fat != null) _fatGoal = fat;
-    if (water != null) _waterGoal = water;
-
-    if (_userId != null) {
-      await _firestore.saveUserProfile(_userId!, {
-        'calorieGoal': _calorieGoal,
-        'proteinGoal': _proteinGoal,
-        'carbsGoal': _carbsGoal,
-        'fatGoal': _fatGoal,
-        'waterGoal': _waterGoal,
-      });
-    }
+    // Left as mock local for now
+    if (_user == null) return;
+    _user!['goals'] ??= {};
+    if (calories != null) _user!['goals']['calorieGoal'] = calories;
+    if (protein != null) _user!['goals']['proteinGoal'] = protein;
+    if (carbs != null) _user!['goals']['carbsGoal'] = carbs;
+    if (fat != null) _user!['goals']['fatGoal'] = fat;
+    if (water != null) _user!['goals']['waterGoal'] = water;
     notifyListeners();
   }
 
-  Future<void> updateProfile(String name, String rank) async {
-    _name = name;
-    _rank = rank;
-    if (_userId != null) {
-      await _firestore.saveUserProfile(_userId!, {'name': name, 'rank': rank});
-    }
+  Future<void> updateProfile(String newName, String newRank) async {
+    if (_user == null) return;
+    _user!['name'] = newName;
+    _user!['rank'] = newRank;
     notifyListeners();
   }
 }

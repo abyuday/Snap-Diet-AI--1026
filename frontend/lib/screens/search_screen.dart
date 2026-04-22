@@ -66,6 +66,8 @@ class _SearchScreenState extends State<SearchScreen> {
               controller: _searchController,
               autofocus: true,
               onChanged: _onSearch,
+              onSubmitted: _onSearch,
+              textInputAction: TextInputAction.search,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Try "Idli", "Chicken Biryani", "Apple"...',

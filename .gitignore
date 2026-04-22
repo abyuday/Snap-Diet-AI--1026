@@ -43,3 +43,5 @@ rebuild_log.txt
 models/*.pth
 
 datasets/
+backend/temp_uploads/
+frontend/flutter_linux_*.tar.xz

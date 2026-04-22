@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../services/auth_service.dart';
 import '../services/user_provider.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -26,15 +25,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final auth = Provider.of<AuthService>(context, listen: false);
-      final credential = await auth.signUp(_emailController.text, _passwordController.text);
-      
-      // Initialize profile in Firestore
-      if (credential.user != null) {
-        final profile = Provider.of<UserProvider>(context, listen: false);
-        profile.setUserId(credential.user!.uid);
-        await profile.updateProfile(_nameController.text, "Nutrition Novice");
-      }
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.signup(
+        _nameController.text,
+        _emailController.text,
+        _passwordController.text,
+        2000, 120, 250, 70
+      );
       
       if (mounted) Navigator.pop(context);
     } catch (e) {

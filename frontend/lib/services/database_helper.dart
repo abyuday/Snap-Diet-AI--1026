@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqflite.dart' if (dart.library.html) '../services/db_stub.dart';
 import '../services/history_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -33,7 +33,7 @@ class DatabaseHelper {
     );
   }
 
-  Future _onCreate(Database db, int version) async {
+  Future _onCreate(dynamic db, int version) async {
     await db.execute('''
       CREATE TABLE history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +57,7 @@ class DatabaseHelper {
     ''');
   }
 
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future _onUpgrade(dynamic db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('''
         CREATE TABLE water (
@@ -88,7 +88,7 @@ class DatabaseHelper {
       });
       return 1;
     }
-    Database db = await database;
+    dynamic db = await database;
     return await db.insert('history', {
       'foodName': entry.foodName,
       'date': entry.dateTime.toIso8601String(),
@@ -106,7 +106,7 @@ class DatabaseHelper {
     if (kIsWeb) {
       maps = _webHistory;
     } else {
-      Database db = await database;
+      dynamic db = await database;
       maps = await db.query('history', orderBy: 'id DESC');
     }
     
@@ -136,7 +136,7 @@ class DatabaseHelper {
       _webWater[date] = amount;
       return 1;
     }
-    Database db = await database;
+    dynamic db = await database;
     // Check if entry exists for this day
     List<Map<String, dynamic>> existing = await db.query(
       'water',
@@ -163,7 +163,7 @@ class DatabaseHelper {
     if (kIsWeb) {
       return _webWater[date] ?? 0;
     }
-    Database db = await database;
+    dynamic db = await database;
     List<Map<String, dynamic>> maps = await db.query(
       'water',
       where: 'date = ?',

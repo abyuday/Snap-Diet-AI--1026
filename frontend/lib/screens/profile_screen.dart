@@ -138,7 +138,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => context.read<AuthService>().logout(),
+                onTap: () => context.read<UserProvider>().logout(),
                 child: _SettingsTile(
                   icon: Icons.logout_rounded, 
                   label: 'Logout', 

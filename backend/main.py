@@ -1,7 +1,8 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 import shutil
 import os
 import mimetypes
@@ -10,6 +11,8 @@ import re
 from typing import Optional, List
 from dotenv import load_dotenv
 from services.cache_service import cache, TTL_SEARCH, TTL_CHAT, TTL_BARCODE
+from database import user_collection, user_helper
+from services.auth_service import verify_password, get_password_hash, create_access_token, decode_token
 
 # Load environment variables from .env
 load_dotenv()
@@ -125,6 +128,79 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     await cache.close()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    payload = decode_token(token)
+    if payload is None:
+        raise credentials_exception
+    email: str = payload.get("sub")
+    if email is None:
+        raise credentials_exception
+    user = await user_collection.find_one({"email": email})
+    if user is None:
+        raise credentials_exception
+    return user_helper(user)
+
+class UserSignup(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    calorieGoal: Optional[int] = 2000
+    proteinGoal: Optional[int] = 120
+    carbsGoal: Optional[int] = 250
+    fatGoal: Optional[int] = 70
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+    
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict
+
+@app.post("/api/auth/signup", response_model=TokenResponse)
+async def signup(user: UserSignup):
+    existing = await user_collection.find_one({"email": user.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    user_dict = {
+        "name": user.name,
+        "email": user.email,
+        "password": get_password_hash(user.password),
+        "rank": "Nutrition Novice",
+        "goals": {
+            "calorieGoal": user.calorieGoal,
+            "proteinGoal": user.proteinGoal,
+            "carbsGoal": user.carbsGoal,
+            "fatGoal": user.fatGoal,
+            "waterGoal": 2500,
+        }
+    }
+    new_user = await user_collection.insert_one(user_dict)
+    created_user = await user_collection.find_one({"_id": new_user.inserted_id})
+    token = create_access_token(data={"sub": created_user["email"]})
+    return {"access_token": token, "user": user_helper(created_user)}
+
+@app.post("/api/auth/login", response_model=TokenResponse)
+async def login(creds: UserLogin):
+    user = await user_collection.find_one({"email": creds.email})
+    if not user or not verify_password(creds.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    token = create_access_token(data={"sub": user["email"]})
+    return {"access_token": token, "user": user_helper(user)}
+
+@app.get("/api/auth/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return current_user
 
 @app.get("/")
 def read_root():

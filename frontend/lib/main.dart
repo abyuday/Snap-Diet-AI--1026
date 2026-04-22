@@ -1,4 +1,3 @@
-// Firebase imports removed for local mock demo
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
@@ -7,12 +6,9 @@ import 'screens/login_screen.dart';
 import 'services/api_service.dart';
 import 'services/history_provider.dart';
 import 'services/user_provider.dart';
-import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Firebase initialization bypassed for mock demo
-  
   runApp(const DietitianAppLoader());
 }
 
@@ -23,19 +19,19 @@ class DietitianAppLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider(create: (_) => AuthService()),
         Provider(create: (_) => ApiService()),
-        StreamProvider<MockUser?>(
-          create: (context) => context.read<AuthService>().user,
-          initialData: null,
-        ),
-        ChangeNotifierProxyProvider<MockUser?, HistoryProvider>(
+        ChangeNotifierProvider(create: (_) => UserProvider()..tryAutoLogin()),
+        ChangeNotifierProxyProvider<UserProvider, HistoryProvider>(
           create: (_) => HistoryProvider(),
-          update: (_, user, history) => history!..setUserId(user?.uid),
-        ),
-        ChangeNotifierProxyProvider<MockUser?, UserProvider>(
-          create: (_) => UserProvider(),
-          update: (_, user, profile) => profile!..setUserId(user?.uid),
+          update: (_, userProvider, history) {
+            // Re-fetch or reset if auth state changes
+            if (userProvider.isAuthenticated) {
+              history?.setUserId('authenticated_user');
+            } else {
+              history?.setUserId(null);
+            }
+            return history ?? HistoryProvider();
+          },
         ),
       ],
       child: const DietitianApp(),
@@ -62,12 +58,13 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<MockUser?>(context);
-    
-    // If authenticated, show app, otherwise show login
-    if (user != null) {
-      return const MainShell();
-    }
-    return const LoginScreen();
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        if (userProvider.isAuthenticated) {
+          return const MainShell();
+        }
+        return const LoginScreen();
+      },
+    );
   }
 }

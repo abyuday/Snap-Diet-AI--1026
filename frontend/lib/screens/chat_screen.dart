@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +22,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _inputFocusNode = FocusNode();
   final List<_ChatMessage> _messages = [];
   bool _isLoading = false;
 
@@ -189,12 +191,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _micPulseController.dispose();
     _controller.dispose();
     _scrollController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Material(
       color: AppTheme.backgroundColor,
       child: SafeArea(
         child: Column(
@@ -524,19 +527,37 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: Colors.white.withOpacity(0.1)),
               ),
-              child: TextField(
-                controller: _controller,
-                onSubmitted: (_) => _handleSend(),
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                maxLines: null,
-                decoration: InputDecoration(
-                  hintText: _isListening ? 'Listening...' : 'Ask, say what you ate, or request a recipe...',
-                  hintStyle: TextStyle(
-                    color: _isListening ? Colors.redAccent.withOpacity(0.7) : Colors.white24,
-                    fontSize: 13,
+              child: Focus(
+                focusNode: _inputFocusNode,
+                onKeyEvent: (_, event) {
+                  // Enter alone → send; Shift+Enter → insert newline
+                  if (event is KeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.enter &&
+                      !HardwareKeyboard.instance.isShiftPressed) {
+                    _handleSend();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _inputFocusNode,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  maxLines: null,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: _isListening
+                        ? 'Listening…'
+                        : 'Ask, say what you ate… (Enter to send)',
+                    hintStyle: TextStyle(
+                      color: _isListening
+                          ? Colors.redAccent.withOpacity(0.7)
+                          : Colors.white24,
+                      fontSize: 13,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),

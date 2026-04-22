@@ -18,15 +18,13 @@ dependencies:
   sqflite: ^2.3.0
   path: ^1.8.3
   intl: ^0.18.1
-  firebase_core: any
-  firebase_auth: any
-  cloud_firestore: any
   fl_chart: ^0.66.2
-  flutter_markdown: any
+  flutter_markdown: ^0.6.18
   sensors_plus: ^4.0.2
   permission_handler: ^11.3.1
   http_parser: ^4.0.0
   speech_to_text: ^6.6.2
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import 'signup_screen.dart';
-import '../services/auth_service.dart';
+import '../services/user_provider.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -25,8 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final auth = Provider.of<AuthService>(context, listen: false);
-      await auth.login(_emailController.text, _passwordController.text);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.login(_emailController.text, _passwordController.text);
       // Main app will rebuild and take over via StreamProvider
     } catch (e) {
       _showError(e.toString());

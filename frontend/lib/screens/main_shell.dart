@@ -12,10 +12,10 @@ class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  State<MainShell> createState() => MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -90,14 +90,14 @@ class _MainShellState extends State<MainShell> {
               label: 'Home',
               index: 0,
               selectedIndex: _selectedIndex,
-              onTap: _onTap,
+              onTap: onTap,
             ),
             _NavItem(
               icon: Icons.dashboard_rounded,
               label: 'Daily',
               index: 1,
               selectedIndex: _selectedIndex,
-              onTap: _onTap,
+              onTap: onTap,
             ),
             const SizedBox(width: 50), // Gap for FAB
             _NavItem(
@@ -105,21 +105,21 @@ class _MainShellState extends State<MainShell> {
               label: 'AI Chat',
               index: 2,
               selectedIndex: _selectedIndex,
-              onTap: _onTap,
+              onTap: onTap,
             ),
             _NavItem(
               icon: Icons.history_rounded,
               label: 'History',
               index: 3,
               selectedIndex: _selectedIndex,
-              onTap: _onTap,
+              onTap: onTap,
             ),
             _NavItem(
               icon: Icons.person_rounded,
               label: 'Profile',
               index: 4,
               selectedIndex: _selectedIndex,
-              onTap: _onTap,
+              onTap: onTap,
             ),
           ],
         ),
@@ -127,7 +127,7 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  void _onTap(int index) => setState(() => _selectedIndex = index);
+  void onTap(int index) => setState(() => _selectedIndex = index);
 }
 
 class _NavItem extends StatelessWidget {

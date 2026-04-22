@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +9,8 @@ import 'analysis_screen.dart';
 import 'multi_capture_screen.dart';
 import 'search_screen.dart';
 import 'chat_screen.dart';
+import 'main_shell.dart';
+import 'voice_log_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -223,11 +224,9 @@ class _HomeScreenState extends State<HomeScreen>
         initialChildSize: 0.75,
         maxChildSize: 0.95,
         minChildSize: 0.4,
-        builder: (_, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
+        builder: (_, scrollController) => Material(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           child: Column(
             children: [
               // Handle
@@ -593,13 +592,40 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildActionButtons() {
     return Column(
       children: [
-        _ScanButton(
-          label: 'Scan Food (Multi-Angle)',
-          icon: Icons.camera_alt_rounded,
-          gradient: const LinearGradient(
-            colors: [Color(0xFF56C27B), Color(0xFF2E7D32)],
-          ),
-          onTap: _openMultiCapture,
+        Row(
+          children: [
+            Expanded(
+              child: _ScanButton(
+                label: 'Scan Food',
+                icon: Icons.camera_alt_rounded,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF56C27B), Color(0xFF2E7D32)],
+                ),
+                onTap: _openMultiCapture,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ScanButton(
+                label: 'Voice Log',
+                icon: Icons.mic_rounded,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, a, __) => const VoiceLogScreen(),
+                      transitionsBuilder: (_, a, __, child) =>
+                          FadeTransition(opacity: a, child: child),
+                      transitionDuration: const Duration(milliseconds: 350),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
         _ScanButton(

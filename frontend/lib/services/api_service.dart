@@ -8,10 +8,46 @@ import 'package:image_picker/image_picker.dart';
 class ApiService {
   /// Override via: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
   /// (Android emulator: 10.0.2.2; physical device: your machine's IP)
-  static final String baseUrl = const String.fromEnvironment(
+  static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://127.0.0.1:8005',
   );
+
+  static String? authToken;
+
+  Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        if (authToken != null) 'Authorization': 'Bearer $authToken',
+      };
+
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception(jsonDecode(response.body)['detail'] ?? 'Login failed');
+  }
+
+  Future<Map<String, dynamic>> signup(
+      String name, String email, String password, int cal, int prot, int carbs, int fat) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/signup'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+        'calorieGoal': cal,
+        'proteinGoal': prot,
+        'carbsGoal': carbs,
+        'fatGoal': fat,
+      }),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception(jsonDecode(response.body)['detail'] ?? 'Signup failed');
+  }
 
   /// Analyze a single food image via /analyze endpoint
   Future<NutritionResult> analyzeImage(XFile imageFile) async {
@@ -158,6 +194,38 @@ class ApiService {
       return decoded;
     } else {
       throw Exception('Failed to get chat response: ${response.body}');
+    }
+  }
+
+  Future<NutritionResult> analyzeBarcode(String barcode) async {
+    final response = await http.get(Uri.parse('$baseUrl/analyze-barcode?barcode=$barcode'));
+
+    if (response.statusCode == 200) {
+      return NutritionResult.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Barcode lookup failed: ${response.body}');
+    }
+  }
+
+  Future<NutritionResult> processBarcodeImage(XFile imageFile) async {
+    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/process-barcode-image'));
+    
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        await imageFile.readAsBytes(),
+        filename: imageFile.name,
+        contentType: MediaType.parse(imageFile.name.endsWith('.png') ? 'image/png' : 'image/jpeg'),
+      ),
+    );
+
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return NutritionResult.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to process barcode image: ${response.body}');
     }
   }
 }

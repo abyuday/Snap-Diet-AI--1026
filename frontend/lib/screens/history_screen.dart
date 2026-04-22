@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -170,11 +170,13 @@ class _HistoryTile extends StatelessWidget {
             child: SizedBox(
               width: 52,
               height: 52,
-              child: item.imagePath.startsWith('http') 
+              child: (item.imagePath.startsWith('http') || item.imagePath.startsWith('blob:'))
                 ? Image.network(item.imagePath, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())
                 : (item.imagePath.isEmpty 
                     ? _buildPlaceholder() 
-                    : Image.file(File(item.imagePath), fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())),
+                    : kIsWeb 
+                      ? _buildPlaceholder() 
+                      : Image.network(item.imagePath, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())),
             ),
           ),
           const SizedBox(width: 14),
