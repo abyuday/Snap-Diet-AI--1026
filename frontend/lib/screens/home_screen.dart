@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(height: 24),
 
                     // Ask AI section
-                    _sheetSectionTitle('🤖 Ask the AI Dietitian'),
+                    _sheetSectionTitle('🤖 Ask SnapDiet AI'),
                     const SizedBox(height: 12),
                     Text(
                       'Tap any question to get an instant AI answer:',
@@ -469,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Hello 👋', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14)),
-            const Text('AI Dietitian', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text('SnapDiet AI', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
           ],
         ),
         Container(

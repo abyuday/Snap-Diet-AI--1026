@@ -25,7 +25,7 @@ from fastapi.responses import JSONResponse
 # from services.search_service import search_foods
 # from services.chat_service import get_chat_response
 
-app = FastAPI(title="AI Dietitian API", version="1.0.0")
+app = FastAPI(title="SnapDiet AI API", version="1.0.0")
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):

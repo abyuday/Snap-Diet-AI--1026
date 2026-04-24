@@ -9,6 +9,23 @@ import 'services/user_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Custom ErrorWidget to debug layout crashes
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      child: SingleChildScrollView(
+        child: Container(
+          color: Colors.black87,
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            '${details.exception}\n\n${details.stack}',
+            style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+          ),
+        ),
+      ),
+    );
+  };
+
   runApp(const DietitianAppLoader());
 }
 
@@ -45,7 +62,7 @@ class DietitianApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AI Dietitian',
+      title: 'SnapDiet AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const AuthWrapper(),

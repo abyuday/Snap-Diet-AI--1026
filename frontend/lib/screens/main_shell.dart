@@ -29,12 +29,7 @@ class MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true, // Allows FAB to sit over the body nicely
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (child, animation) =>
-            FadeTransition(opacity: animation, child: child),
-        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: _pages[_selectedIndex]),
-      ),
+      body: _pages[_selectedIndex],
       floatingActionButton: _buildScanFab(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _buildBottomNav(),

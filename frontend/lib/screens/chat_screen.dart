@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
@@ -40,8 +37,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
-    _messages.add(_ChatMessage(
-      text: "Namaste! 👋 I'm your AI Dietitian.\n\nYou can:\n- **Ask nutrition questions**\n- **Say what you ate** (e.g. 'I just had two boiled eggs and toast')\n- **Request a recipe** (e.g. 'Give me a recipe using chicken and spinach')",
+    _messages.add(const _ChatMessage(
+      text: "Namaste! 👋 I'm SnapDiet AI.\n\nYou can:\n- **Ask nutrition questions**\n- **Say what you ate** (e.g. 'I just had two boiled eggs and toast')\n- **Request a recipe** (e.g. 'Give me a recipe using chicken and spinach')",
       isAi: true,
     ));
 
@@ -285,8 +282,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('AI Dietitian',
-                  style: GoogleFonts.outfit(
+              const Text('SnapDiet AI',
+                  style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               Row(
                 children: [
@@ -348,24 +345,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     : AppTheme.primaryColor.withOpacity(0.4),
               ),
             ),
-            child: msg.isAi
-                ? MarkdownBody(
-                    data: msg.text,
-                    styleSheet: MarkdownStyleSheet(
-                      p: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 14,
-                          height: 1.5),
-                      listBullet: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.9), fontSize: 14),
-                      strong: GoogleFonts.inter(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  )
-                : Text(
-                    msg.text,
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 14, height: 1.5),
-                  ),
+            child: Text(
+              msg.text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
           ),
 
           // Logged foods confirmation
@@ -509,103 +496,76 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
-          // Mic Button
-          AnimatedBuilder(
-            animation: _micPulseController,
-            builder: (_, child) {
-              return GestureDetector(
-                onTap: _speechAvailable
-                    ? (_isListening ? _stopListening : _startListening)
-                    : null,
-                child: Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isListening
-                        ? Colors.redAccent.withOpacity(0.15 + 0.15 * _micPulseController.value)
-                        : Colors.white.withOpacity(0.06),
-                    border: Border.all(
-                      color: _isListening
-                          ? Colors.redAccent.withOpacity(0.6)
-                          : Colors.white12,
-                    ),
-                  ),
-                  child: Icon(
-                    _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                    color: _isListening ? Colors.redAccent : Colors.white38,
-                    size: 20,
-                  ),
+          // Mic Button — static, no AnimatedBuilder to avoid HTML renderer crash
+          GestureDetector(
+            onTap: _speechAvailable
+                ? (_isListening ? _stopListening : _startListening)
+                : null,
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _isListening
+                    ? const Color(0x26FF5252)
+                    : const Color(0x10FFFFFF),
+                border: Border.all(
+                  color: _isListening
+                      ? const Color(0x99FF5252)
+                      : Colors.white12,
                 ),
-              );
-            },
+              ),
+              child: Icon(
+                _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                color: _isListening ? Colors.redAccent : Colors.white38,
+                size: 20,
+              ),
+            ),
           ),
           const SizedBox(width: 10),
 
-          // Text Field
+          // Text Field — FocusNode only on TextField, not duplicated on Focus widget
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               decoration: BoxDecoration(
                 color: AppTheme.backgroundColor,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white12),
               ),
-              child: Focus(
+              child: TextField(
+                controller: _controller,
                 focusNode: _inputFocusNode,
-                onKeyEvent: (_, event) {
-                  // Enter alone → send; Shift+Enter → insert newline
-                  if (event is KeyDownEvent &&
-                      event.logicalKey == LogicalKeyboardKey.enter &&
-                      !HardwareKeyboard.instance.isShiftPressed) {
-                    _handleSend();
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _inputFocusNode,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  maxLines: null,
-                  textInputAction: TextInputAction.newline,
-                  decoration: InputDecoration(
-                    hintText: _isListening
-                        ? 'Listening…'
-                        : 'Ask, say what you ate… (Enter to send)',
-                    hintStyle: TextStyle(
-                      color: _isListening
-                          ? Colors.redAccent.withOpacity(0.7)
-                          : Colors.white24,
-                      fontSize: 13,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _handleSend(),
+                decoration: InputDecoration(
+                  hintText: _isListening
+                      ? 'Listening…'
+                      : 'Ask about nutrition, recipes…',
+                  hintStyle: const TextStyle(
+                    color: Colors.white24,
+                    fontSize: 13,
                   ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 10),
 
-          // Send Button
+          // Send Button — solid color, no BoxShadow or LinearGradient
           GestureDetector(
             onTap: _handleSend,
             child: Container(
               width: 46,
               height: 46,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                ),
+              decoration: const BoxDecoration(
+                color: AppTheme.primaryColor,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  ),
-                ],
               ),
               child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
             ),

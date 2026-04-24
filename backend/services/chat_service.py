@@ -274,7 +274,7 @@ class ChatService:
             user_context += f"User just logged: {foods_str}.\n"
 
         system_prompt = (
-            "You are 'AI Dietitian', a professional, friendly, and highly knowledgeable nutrition expert "
+            "You are 'SnapDiet AI', a professional, friendly, and highly knowledgeable nutrition expert "
             "who specialises in both Indian cuisine and global foods. "
             "FORMATTING RULES:\n"
             "1. NEVER use markdown tables.\n"
