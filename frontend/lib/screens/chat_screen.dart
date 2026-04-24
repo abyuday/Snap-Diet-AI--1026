@@ -57,21 +57,26 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _initSpeech() async {
-    if (kIsWeb) {
-      // speech_to_text works on Chrome via browser WebSpeech API
-      _speechAvailable = await _speech.initialize(
-        onError: (_) => _stopListening(),
-        onStatus: (status) {
-          if (status == 'done' || status == 'notListening') _stopListening();
-        },
-      );
-    } else {
-      _speechAvailable = await _speech.initialize(
-        onError: (_) => _stopListening(),
-        onStatus: (status) {
-          if (status == 'done' || status == 'notListening') _stopListening();
-        },
-      );
+    try {
+      if (kIsWeb) {
+        // speech_to_text works on Chrome via browser WebSpeech API
+        _speechAvailable = await _speech.initialize(
+          onError: (val) => debugPrint('Speech Error: $val'),
+          onStatus: (status) {
+            if (status == 'done' || status == 'notListening') _stopListening();
+          },
+        ).timeout(const Duration(seconds: 2), onTimeout: () => false);
+      } else {
+        _speechAvailable = await _speech.initialize(
+          onError: (_) => _stopListening(),
+          onStatus: (status) {
+            if (status == 'done' || status == 'notListening') _stopListening();
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint("Speech initialization failed: $e");
+      _speechAvailable = false;
     }
     if (mounted) setState(() {});
   }
@@ -197,44 +202,63 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.backgroundColor,
-      child: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(20),
-                itemCount: _messages.length,
-                itemBuilder: (ctx, i) => _buildMessage(_messages[i], ctx),
-              ),
-            ),
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primaryColor,
-                      ),
+    try {
+      return Material(
+        color: AppTheme.backgroundColor,
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: _messages.isEmpty 
+                  ? Center(child: Text("Initializing chat...", style: TextStyle(color: Colors.white24)))
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(20),
+                      itemCount: _messages.length,
+                      itemBuilder: (ctx, i) => _buildMessage(_messages[i], ctx),
                     ),
-                    SizedBox(width: 8),
-                    Text('AI is thinking...', style: TextStyle(color: Colors.white38, fontSize: 12)),
-                  ],
-                ),
               ),
-            _buildInputArea(),
-          ],
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text('AI is thinking...', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              _buildInputArea(),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e, stack) {
+      debugPrint("ERROR rendering ChatScreen: $e\n$stack");
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              "Something went wrong loading the chat interface. Error: $e",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildHeader() {

@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Install missing database and auth dependencies
+RUN pip install motor "passlib[bcrypt]" "python-jose[cryptography]" email-validator
 
 # Copy backend code
 COPY . .

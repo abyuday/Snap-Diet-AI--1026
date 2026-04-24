@@ -20,6 +20,12 @@ class UserProvider extends ChangeNotifier {
   int get fatGoal => _user?['goals']?['fatGoal'] ?? 70;
   int get waterGoal => _user?['goals']?['waterGoal'] ?? 2500;
 
+  int currentWater = 0;
+
+  void addWater(int amount) {
+    currentWater += amount;
+    notifyListeners();
+  }
   Future<void> tryAutoLogin() async {
     final prefs = await SharedPreferences.getInstance();
     if (!prefs.containsKey('userData')) return;

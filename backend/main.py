@@ -17,12 +17,23 @@ from services.auth_service import verify_password, get_password_hash, create_acc
 # Load environment variables from .env
 load_dotenv()
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 # Services will be imported lazily within endpoints to prevent startup hangs
 # from services.food_analyzer import analyze_food_image, predict_food
 # from services.search_service import search_foods
 # from services.chat_service import get_chat_response
 
 app = FastAPI(title="AI Dietitian API", version="1.0.0")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    print(f"ERROR: Validation failed for {request.url}: {exc.errors()}", flush=True)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": str(exc.body)},
+    )
 
 # CORS: "*" requires allow_credentials=False; set CORS_ORIGINS for specific origins
 _cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()] or ["*"]
@@ -71,9 +82,9 @@ class SearchResult(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    profile: dict
-    history: List[dict]
-    goals: dict
+    profile: Optional[dict] = {}
+    history: Optional[List[dict]] = []
+    goals: Optional[dict] = {}
 
 class ChatResponse(BaseModel):
     reply: str

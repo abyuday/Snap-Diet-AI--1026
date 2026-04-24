@@ -4,14 +4,16 @@ import '../models/nutrition_result.dart';
 
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 class ApiService {
   /// Override via: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
   /// (Android emulator: 10.0.2.2; physical device: your machine's IP)
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8005',
-  );
+  static String get baseUrl {
+    if (kIsWeb) return 'http://localhost:8005';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:8005';
+    return 'http://localhost:8005';
+  }
 
   static String? authToken;
 

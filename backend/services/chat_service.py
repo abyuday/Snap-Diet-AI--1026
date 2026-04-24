@@ -291,13 +291,17 @@ class ChatService:
         )
 
         try:
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": f"User Context: {user_context}"},
+                {"role": "user", "content": message},
+            ]
+            
+            print(f"DEBUG [Chat]: Sending request to {self.model} with {len(messages)} messages", flush=True)
+            
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "assistant", "content": f"Context: {user_context}"},
-                    {"role": "user", "content": message},
-                ],
+                messages=messages,
                 temperature=0.7
             )
 

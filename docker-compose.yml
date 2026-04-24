@@ -20,7 +20,7 @@ services:
     image: mongo:latest
     container_name: dietitian_mongo
     ports:
-      - "27017:27017"
+      - "27018:27017"
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=adminpassword
@@ -61,8 +61,8 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - REDIS_URL=redis://dietitian_redis:6379
-      - MONGO_URL=mongodb://admin:adminpassword@dietitian_mongo:27017/
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://admin:adminpassword@mongo:27017/
     volumes:
       - ./backend:/app
       - ./datasets:/app/datasets
