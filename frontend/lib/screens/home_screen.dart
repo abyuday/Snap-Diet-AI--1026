@@ -11,6 +11,7 @@ import 'search_screen.dart';
 import 'chat_screen.dart';
 import 'main_shell.dart';
 import 'voice_log_screen.dart';
+import 'ar_capture_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -84,6 +85,13 @@ class _HomeScreenState extends State<HomeScreen>
         },
         transitionDuration: const Duration(milliseconds: 400),
       ),
+    );
+  }
+
+  void _openARCapture() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ArCaptureScreen()),
     );
   }
 
@@ -592,11 +600,21 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildActionButtons() {
     return Column(
       children: [
+        // Premium AR Scan Button (Primary Action)
+        _ScanButton(
+          label: 'AR 3D Scan',
+          icon: Icons.view_in_ar_rounded,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF8E24AA), Color(0xFF6A1B9A)],
+          ),
+          onTap: _openARCapture,
+        ),
+        const SizedBox(height: 14),
         Row(
           children: [
             Expanded(
               child: _ScanButton(
-                label: 'Scan Food',
+                label: 'Snap Photo',
                 icon: Icons.camera_alt_rounded,
                 gradient: const LinearGradient(
                   colors: [Color(0xFF56C27B), Color(0xFF2E7D32)],

@@ -35,6 +35,13 @@ _PORTION_NUMBER_WORDS = {
     "quarter": 0.25, "dozen": 12, "couple": 2,
 }
 
+def _dietai_safe_float(val, default=0.0):
+    try:
+        if pd.isna(val): return default
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
 def parse_portion_count(portion_description: str) -> float:
     """
     Extract numeric count from a portion description.
@@ -102,7 +109,7 @@ class RAGService:
         self._portion_lookup: Dict[str, Dict] = {}   # food_name_lower -> {grams_per_unit, unit, ...}
         self._density_lookup: Dict[str, float] = {}  # food_name_lower -> density_g_cm3
         self._load_density()
-        self.vector_db = None
+        self._name_lookup, self._portion_lookup = {}, {}
         self._initialize_db()
 
     def _load_density(self):
@@ -126,20 +133,11 @@ class RAGService:
     # ------------------------------------------------------------------
 
     def _initialize_db(self):
-        """Loads food data and creates/loads a vector database."""
-        os.makedirs(CHROMA_DIR, exist_ok=True)
-        
-        if os.path.exists(os.path.join(CHROMA_DIR, "index")):
-            self.vector_db = Chroma(persist_directory=CHROMA_DIR, embedding_function=self.embeddings)
-            self._name_lookup, self._portion_lookup = self._build_lookups()
-            return
-
-        documents, self._name_lookup, self._portion_lookup = self._get_initial_docs()
-        self.vector_db = Chroma.from_documents(
-            documents=documents,
-            embedding=self.embeddings,
-            persist_directory=CHROMA_DIR
-        )
+        """Loads food data into fast in-memory dictionaries. Skips ChromaDB (corrupted)."""
+        self.vector_db = None  # ChromaDB disabled - using dict lookups only (faster & more reliable)
+        # Build the in-memory name/portion lookup from all CSV sources
+        _, self._name_lookup, self._portion_lookup = self._get_initial_docs()
+        print(f"INFO [RAG]: Fast-mode ready. {len(self._name_lookup)} foods indexed.", flush=True)
 
     def _get_initial_docs(self) -> Tuple[list, dict, dict]:
         """Build documents, name lookup, and portion lookup from all data sources."""
@@ -188,7 +186,7 @@ class RAGService:
                 df = pd.read_csv(indian_path)
                 for _, row in df.iterrows():
                     food_name = str(row['food_name'])
-                    std_grams = float(row.get('standard_portion_grams', 0) or 0)
+                    std_grams = _dietai_safe_float(row.get('standard_portion_grams'))
                     portion_unit = str(row.get('portion_unit', '1 serving'))
 
                     # Rich document text for better semantic retrieval
@@ -256,6 +254,112 @@ class RAGService:
             except Exception as e:
                 print(f"ERROR [RAG]: Loading Indian dataset: {e}", flush=True)
 
+        # -----------------------------------------------------------
+        # 2b. Full INDB / IFCT 2017 Expansion (1,000+ items)
+        # -----------------------------------------------------------
+        ifct_path = "datasets/ifct_2017_full.csv"
+        if os.path.exists(ifct_path):
+            try:
+                df_ifct = pd.read_csv(ifct_path)
+                for _, row in df_ifct.iterrows():
+                    # INDB format mapping
+                    food_name = str(row.get('food_name', ''))
+                    if not food_name: continue
+                    
+                    # Primary macros (per 100g)
+                    calories = _dietai_safe_float(row.get('energy_kcal'))
+                    protein = _dietai_safe_float(row.get('protein_g'))
+                    carbs = _dietai_safe_float(row.get('carb_g'))
+                    fat = _dietai_safe_float(row.get('fat_g'))
+                    
+                    content = f"Indian Food (INDB): {food_name}. Rich nutritional data available."
+                    meta = {
+                        "name": food_name,
+                        "calories": calories,
+                        "protein": protein,
+                        "carbs": carbs,
+                        "fat": fat,
+                        "fiber_g": _dietai_safe_float(row.get('fibre_g')),
+                        "iron_mg": _dietai_safe_float(row.get('iron_mg')),
+                        "calcium_mg": _dietai_safe_float(row.get('calcium_mg')),
+                        "sodium_mg": _dietai_safe_float(row.get('sodium_mg')),
+                        "standard_portion_grams": 100.0,
+                        "portion_unit": "100g",
+                        "source": "INDB_Full"
+                    }
+                    docs.append(Document(page_content=content, metadata=meta))
+                    
+                    name_lower = food_name.lower()
+                    rec = {
+                        "food_name": food_name,
+                        "calories": calories,
+                        "protein": protein,
+                        "carbs": carbs,
+                        "fat": fat,
+                        "fiber_g": meta["fiber_g"],
+                        "iron_mg": meta["iron_mg"],
+                        "calcium_mg": meta["calcium_mg"],
+                        "sodium_mg": meta["sodium_mg"],
+                        "fiber_g": meta["fiber_g"],
+                        "iron_mg": meta["iron_mg"],
+                        "calcium_mg": meta["calcium_mg"],
+                        "source": "INDB Full Database"
+                    }
+                    name_lookup[name_lower] = rec
+                    portion_lookup[name_lower] = {
+                        "food_name": food_name,
+                        "standard_portion_grams": 100.0,
+                        "portion_unit": "100g",
+                    }
+                print(f"INFO [RAG]: Successfully indexed {len(df_ifct)} high-detail items from INDB dataset.", flush=True)
+            except Exception as e:
+                print(f"ERROR [RAG]: Loading INDB dataset: {e}", flush=True)
+
+        # -----------------------------------------------------------
+        # 3. Global Nutrition Expansion (Nutrition5k)
+        # -----------------------------------------------------------
+        global_path = "datasets/global_food_nutrition.csv"
+        if os.path.exists(global_path):
+            try:
+                df_global = pd.read_csv(global_path)
+                for _, row in df_global.iterrows():
+                    food_name = str(row['food_name'])
+                    # Nutrition5k ingredients are per 100g. Standard portion is 100g.
+                    content = (
+                        f"Global ingredient: {food_name}. "
+                        f"Nutrition per 100g: {row['calories']} kcal, "
+                        f"{row['protein']}g protein, {row['carbs']}g carbs, {row['fat']}g fat."
+                    )
+                    meta = {
+                        "name": food_name,
+                        "calories": float(row['calories']),
+                        "protein": float(row['protein']),
+                        "carbs": float(row['carbs']),
+                        "fat": float(row['fat']),
+                        "standard_portion_grams": 100.0,
+                        "portion_unit": "100g",
+                        "source": "Nutrition5k"
+                    }
+                    docs.append(Document(page_content=content, metadata=meta))
+
+                    name_lower = food_name.lower()
+                    name_lookup[name_lower] = {
+                        "food_name": food_name,
+                        "calories": meta["calories"],
+                        "protein": meta["protein"],
+                        "carbs": meta["carbs"],
+                        "fat": meta["fat"],
+                        "source": "Nutrition5k"
+                    }
+                    portion_lookup[name_lower] = {
+                        "food_name": food_name,
+                        "standard_portion_grams": 100.0,
+                        "portion_unit": "100g",
+                    }
+                print(f"INFO [RAG]: Indexed {len(df_global)} global food items from Nutrition5k.", flush=True)
+            except Exception as e:
+                print(f"ERROR [RAG]: Loading global dataset: {e}", flush=True)
+
         return docs, name_lookup, portion_lookup
 
     def _build_lookups(self) -> Tuple[dict, dict]:
@@ -263,18 +367,49 @@ class RAGService:
         name_lookup = {}
         portion_lookup = {}
 
-        # Base FNDDS data
+        # Base Global Data (Expanded Fallback for missing FNDDS files)
+        # Nutrition values are PER 100g as per IFCT/FNDDS standards
         base_data = [
+            # Proteins
+            {"code": "24101000", "name": "Chicken breast",     "calories": 165, "protein": 31,   "carbs": 0,    "fat": 3.6,  "portion_grams": 172, "portion_unit": "1 piece"},
+            {"code": "23111000", "name": "Beef Steak",         "calories": 252, "protein": 27,   "carbs": 0,    "fat": 15.0, "portion_grams": 170, "portion_unit": "1 piece"},
+            {"code": "22211000", "name": "Salmon",             "calories": 208, "protein": 22,   "carbs": 0,    "fat": 13.0, "portion_grams": 150, "portion_unit": "1 piece"},
+            {"code": "11111100", "name": "Egg",                "calories": 155, "protein": 12.6, "carbs": 1.1,  "fat": 10.6, "portion_grams": 50,  "portion_unit": "1 piece"},
+            {"code": "21101000", "name": "Pork Chop",          "calories": 242, "protein": 26,   "carbs": 0,    "fat": 14.0, "portion_grams": 150, "portion_unit": "1 piece"},
+            {"code": "25111000", "name": "Tofu",               "calories": 76,  "protein": 8,    "carbs": 1.9,  "fat": 4.8,  "portion_grams": 100, "portion_unit": "1 block"},
+            
+            # Carbs/Grains
+            {"code": "72101100", "name": "Rice, white",        "calories": 130, "protein": 2.7,  "carbs": 28.2, "fat": 0.3,  "portion_grams": 186, "portion_unit": "1 cup"},
+            {"code": "72101200", "name": "Rice, brown",        "calories": 111, "protein": 2.6,  "carbs": 23.0, "fat": 0.9,  "portion_grams": 190, "portion_unit": "1 cup"},
+            {"code": "73101010", "name": "Spaghetti",          "calories": 158, "protein": 5.8,  "carbs": 30.9, "fat": 0.9,  "portion_grams": 140, "portion_unit": "1 cup"},
+            {"code": "51101010", "name": "Bread, white",       "calories": 265, "protein": 9,    "carbs": 49,   "fat": 3.2,  "portion_grams": 35,  "portion_unit": "1 slice"},
+            {"code": "51101210", "name": "Bread, whole wheat", "calories": 247, "protein": 13,   "carbs": 41,   "fat": 3.4,  "portion_grams": 35,  "portion_unit": "1 slice"},
+            {"code": "71101010", "name": "Potato, boiled",     "calories": 87,  "protein": 1.9,  "carbs": 20,   "fat": 0.1,  "portion_grams": 150, "portion_unit": "1 medium"},
+            
+            # Dairy/Fats
             {"code": "11111111", "name": "Milk, whole",       "calories": 61,  "protein": 3.15, "carbs": 4.8,  "fat": 3.25, "portion_grams": 244, "portion_unit": "1 cup"},
             {"code": "11111211", "name": "Milk, reduced fat",  "calories": 50,  "protein": 3.3,  "carbs": 4.8,  "fat": 1.99, "portion_grams": 244, "portion_unit": "1 cup"},
-            {"code": "53108200", "name": "Pizza",              "calories": 266, "protein": 11.4, "carbs": 33.3, "fat": 9.7,  "portion_grams": 107, "portion_unit": "1 slice"},
-            {"code": "23111000", "name": "Beef Steak",         "calories": 204, "protein": 30.2, "carbs": 0,    "fat": 8.5,  "portion_grams": 170, "portion_unit": "1 piece"},
-            {"code": "72101100", "name": "Rice, white",        "calories": 130, "protein": 2.7,  "carbs": 28.2, "fat": 0.3,  "portion_grams": 186, "portion_unit": "1 cup"},
-            {"code": "24101000", "name": "Chicken breast",     "calories": 165, "protein": 31,   "carbs": 0,    "fat": 3.6,  "portion_grams": 172, "portion_unit": "1 piece"},
+            {"code": "14111100", "name": "Cheddar Cheese",    "calories": 403, "protein": 25,   "carbs": 1.3,  "fat": 33,   "portion_grams": 28,  "portion_unit": "1 slice"},
+            {"code": "11511100", "name": "Yogurt, plain",      "calories": 59,  "protein": 10,   "carbs": 3.6,  "fat": 0.4,  "portion_grams": 170, "portion_unit": "1 container"},
+            {"code": "81101010", "name": "Butter",             "calories": 717, "protein": 0.8,  "carbs": 0.1,  "fat": 81,   "portion_grams": 14,  "portion_unit": "1 tbsp"},
+            {"code": "82101010", "name": "Olive Oil",          "calories": 884, "protein": 0,    "carbs": 0,    "fat": 100,  "portion_grams": 15,  "portion_unit": "1 tbsp"},
+            
+            # Fruits/Veg
             {"code": "41101010", "name": "Apple",              "calories": 52,  "protein": 0.26, "carbs": 13.8, "fat": 0.17, "portion_grams": 182, "portion_unit": "1 piece"},
             {"code": "41101020", "name": "Banana",             "calories": 89,  "protein": 1.09, "carbs": 22.8, "fat": 0.33, "portion_grams": 118, "portion_unit": "1 piece"},
-            {"code": "11111100", "name": "Egg",                "calories": 155, "protein": 12.6, "carbs": 1.1,  "fat": 10.6, "portion_grams": 50,  "portion_unit": "1 piece"},
-            {"code": "73101010", "name": "Spaghetti",          "calories": 158, "protein": 5.8,  "carbs": 30.9, "fat": 0.9,  "portion_grams": 140, "portion_unit": "1 cup"},
+            {"code": "42101010", "name": "Broccoli",           "calories": 34,  "protein": 2.8,  "carbs": 6.6,  "fat": 0.4,  "portion_grams": 91,  "portion_unit": "1 cup"},
+            {"code": "42111010", "name": "Spinach",            "calories": 23,  "protein": 2.9,  "carbs": 3.6,  "fat": 0.4,  "portion_grams": 30,  "portion_unit": "1 cup"},
+            {"code": "42101020", "name": "Tomato",             "calories": 18,  "protein": 0.9,  "carbs": 3.9,  "fat": 0.2,  "portion_grams": 123, "portion_unit": "1 medium"},
+            {"code": "41101030", "name": "Avocado",            "calories": 160, "protein": 2,    "carbs": 8.5,  "fat": 14.7, "portion_grams": 150, "portion_unit": "1 half"},
+            
+            # Common Western Prepared
+            {"code": "53108200", "name": "Pizza, cheese",      "calories": 266, "protein": 11.4, "carbs": 33.3, "fat": 9.7,  "portion_grams": 107, "portion_unit": "1 slice"},
+            {"code": "53108300", "name": "Pizza, pepperoni",   "calories": 298, "protein": 12.0, "carbs": 32.0, "fat": 13.0, "portion_grams": 115, "portion_unit": "1 slice"},
+            {"code": "58101010", "name": "Burger, beef",       "calories": 295, "protein": 17,   "carbs": 24,   "fat": 14,   "portion_grams": 150, "portion_unit": "1 piece"},
+            {"code": "58101020", "name": "Cheeseburger",       "calories": 303, "protein": 16,   "carbs": 24,   "fat": 15,   "portion_grams": 155, "portion_unit": "1 piece"},
+            {"code": "71501010", "name": "French Fries",       "calories": 312, "protein": 3.4,  "carbs": 41,   "fat": 15,   "portion_grams": 100, "portion_unit": "1 medium serving"},
+            {"code": "53201010", "name": "Caesar Salad",       "calories": 190, "protein": 4,    "carbs": 8,    "fat": 16,   "portion_grams": 150, "portion_unit": "1 bowl"},
+            {"code": "58106010", "name": "Sushi, California",  "calories": 143, "protein": 4,    "carbs": 28,   "fat": 2,    "portion_grams": 100, "portion_unit": "4 pieces"},
         ]
         for item in base_data:
             key = item["name"].lower()
@@ -333,6 +468,34 @@ class RAGService:
                             portion_lookup[word] = portion_lookup[name_lower]
             except Exception as e:
                 print(f"ERROR [RAG]: Building lookups: {e}", flush=True)
+
+        # 3. Global CSV
+        global_path = "datasets/global_food_nutrition.csv"
+        if os.path.exists(global_path):
+            try:
+                df_g = pd.read_csv(global_path)
+                for _, row in df_g.iterrows():
+                    name_lower = str(row['food_name']).lower()
+                    rec = {
+                        "food_name": str(row['food_name']),
+                        "calories": float(row['calories']),
+                        "protein": float(row['protein']),
+                        "carbs": float(row['carbs']),
+                        "fat": float(row['fat']),
+                        "source": "Nutrition5k"
+                    }
+                    name_lookup[name_lower] = rec
+                    portion_lookup[name_lower] = {
+                        "food_name": str(row['food_name']),
+                        "standard_portion_grams": 100.0,
+                        "portion_unit": "100g",
+                    }
+                    # Also index by key terms
+                    for word in name_lower.split():
+                        if len(word) >= 4 and word not in name_lookup:
+                            name_lookup[word] = rec
+                            portion_lookup[word] = portion_lookup[name_lower]
+            except: pass
 
         return name_lookup, portion_lookup
 

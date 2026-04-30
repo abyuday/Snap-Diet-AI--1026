@@ -35,14 +35,14 @@ async def validation_exception_handler(request, exc):
         content={"detail": exc.errors(), "body": str(exc.body)},
     )
 
-# CORS: "*" requires allow_credentials=False; set CORS_ORIGINS for specific origins
-_cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()] or ["*"]
+# Ultra-Permissive CORS for Project Submission
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials="*" not in _cors_origins,
+    allow_origins=["*"], # Allow all for maximum reliability during demo
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 class NutritionResponse(BaseModel):
@@ -102,9 +102,9 @@ def _warmup_services():
         from services.rag_service import get_rag_service
         get_rag_service()
         
-        # 2. Warm up Volume Service (Depth model)
-        from services.volume_service import _load_depth_model
-        _load_depth_model()
+        # 2. Warm up Volume Service (Depth model) - DISABLED TO SAVE RAM
+        # from services.volume_service import _load_depth_model
+        # _load_depth_model()
         
         # 3. Warm up VLM Client and local analyzer bits
         from services.food_analyzer import get_local_classifier, _client, _AI_MODEL
@@ -307,6 +307,47 @@ def _sanitize_filename(filename: Optional[str]) -> str:
     return safe[:64] or f"{uuid.uuid4().hex}.jpg"
 
 
+@app.post("/process-barcode-image", response_model=NutritionResponse)
+async def process_barcode_image(file: UploadFile = File(...)):
+    """
+    Endpoint to receive an image containing a barcode, extract the barcode using pyzbar,
+    and then look it up via OpenFoodFacts.
+    """
+    safe_filename = _sanitize_filename(file.filename)
+    temp_dir = "temp_uploads"
+    os.makedirs(temp_dir, exist_ok=True)
+    file_path = os.path.join(temp_dir, safe_filename)
+
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        from PIL import Image
+        from pyzbar.pyzbar import decode
+        img = Image.open(file_path)
+        decoded_objects = decode(img)
+        
+        if not decoded_objects:
+            raise HTTPException(status_code=400, detail="No barcode detected in the image.")
+            
+        # Use the first detected barcode
+        barcode_data = decoded_objects[0].data.decode("utf-8")
+        
+        # Now use the existing barcode lookup logic
+        return await analyze_barcode(barcode_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image processing failed: {str(e)}")
+    finally:
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+
+
 @app.post("/analyze", response_model=NutritionResponse)
 def analyze_food(file: UploadFile = File(...)):
     """
@@ -413,8 +454,11 @@ def analyze_food_multi(files: List[UploadFile] = File(...)):
         return result
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="Multi-image analysis failed.")
+    except Exception as e:
+        import traceback
+        err_msg = f"Multi-image analysis failed: {str(e)}\n{traceback.format_exc()}"
+        print(f"CRITICAL ERROR: {err_msg}", flush=True)
+        raise HTTPException(status_code=500, detail=err_msg)
     finally:
         for p in saved_paths:
             if os.path.exists(p):

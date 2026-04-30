@@ -10,7 +10,15 @@ class ApiService {
   /// Override via: flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
   /// (Android emulator: 10.0.2.2; physical device: your machine's IP)
   static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:8005';
+    const String envUrl = String.fromEnvironment('API_BASE_URL');
+    if (envUrl.isNotEmpty) return envUrl;
+    
+    if (kIsWeb) {
+      // Automatically target the backend on the same IP as the frontend
+      final host = Uri.base.host;
+      return 'http://$host:8005';
+    }
+    
     if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:8005';
     return 'http://localhost:8005';
   }
