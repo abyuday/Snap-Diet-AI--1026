@@ -47,17 +47,66 @@ class HistoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  DateTime _selectedDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  DateTime get selectedDate => _selectedDate;
+
+  void setSelectedDate(DateTime date) {
+    _selectedDate = DateTime(date.year, date.month, date.day);
+    notifyListeners();
+  }
+
   List<HistoryEntry> get history => List.unmodifiable(_history);
 
-  double get totalToday => _getSumForToday((e) => e.calories);
-  double get totalProteinToday => _getSumForToday((e) => e.protein);
-  double get totalCarbsToday => _getSumForToday((e) => e.carbs);
-  double get totalFatToday => _getSumForToday((e) => e.fat);
+  List<HistoryEntry> get selectedDateEntries {
+    return _history.where((e) => 
+      e.dateTime.year == _selectedDate.year && 
+      e.dateTime.month == _selectedDate.month && 
+      e.dateTime.day == _selectedDate.day
+    ).toList();
+  }
 
-  double _getSumForToday(double Function(HistoryEntry) selector) {
-    final now = DateTime.now();
+  int get currentStreak {
+    if (_history.isEmpty) return 0;
+    
+    final days = _history.map((e) => DateTime(e.dateTime.year, e.dateTime.month, e.dateTime.day)).toSet().toList();
+    days.sort((a, b) => b.compareTo(a)); 
+    
+    int streak = 0;
+    DateTime today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    DateTime expectedDate = today;
+    
+    if (!days.contains(today)) {
+       DateTime yesterday = today.subtract(const Duration(days: 1));
+       if (!days.contains(yesterday)) {
+          return 0;
+       }
+       expectedDate = yesterday;
+    }
+
+    for (var d in days) {
+      if (d == expectedDate) {
+        streak++;
+        expectedDate = expectedDate.subtract(const Duration(days: 1));
+      } else if (d.isBefore(expectedDate)) {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  double get totalToday => _getSumForDate(DateTime.now(), (e) => e.calories);
+  double get totalProteinToday => _getSumForDate(DateTime.now(), (e) => e.protein);
+  double get totalCarbsToday => _getSumForDate(DateTime.now(), (e) => e.carbs);
+  double get totalFatToday => _getSumForDate(DateTime.now(), (e) => e.fat);
+
+  double get totalSelectedDate => _getSumForDate(_selectedDate, (e) => e.calories);
+  double get totalProteinSelectedDate => _getSumForDate(_selectedDate, (e) => e.protein);
+  double get totalCarbsSelectedDate => _getSumForDate(_selectedDate, (e) => e.carbs);
+  double get totalFatSelectedDate => _getSumForDate(_selectedDate, (e) => e.fat);
+
+  double _getSumForDate(DateTime date, double Function(HistoryEntry) selector) {
     return _history
-        .where((e) => e.dateTime.year == now.year && e.dateTime.month == now.month && e.dateTime.day == now.day)
+        .where((e) => e.dateTime.year == date.year && e.dateTime.month == date.month && e.dateTime.day == date.day)
         .fold(0.0, (sum, item) => sum + selector(item));
   }
 
@@ -66,9 +115,47 @@ class HistoryProvider extends ChangeNotifier {
     return List.generate(7, (index) {
       final date = now.subtract(Duration(days: 6 - index));
       return _history
-          .where((e) => e.dateTime.day == date.day && e.dateTime.month == date.month)
+          .where((e) => e.dateTime.year == date.year && e.dateTime.month == date.month && e.dateTime.day == date.day)
           .fold(0.0, (sum, item) => sum + item.calories);
     });
+  }
+
+  List<double> get monthlyCalorieTrend {
+    final now = DateTime.now();
+    return List.generate(30, (index) {
+      final date = now.subtract(Duration(days: 29 - index));
+      return _history
+          .where((e) => e.dateTime.year == date.year && e.dateTime.month == date.month && e.dateTime.day == date.day)
+          .fold(0.0, (sum, item) => sum + item.calories);
+    });
+  }
+
+  List<double> get yearlyCalorieTrend {
+    final now = DateTime.now();
+    return List.generate(12, (index) {
+      final month = now.month - 11 + index;
+      final actualMonth = month <= 0 ? month + 12 : month;
+      final actualYear = month <= 0 ? now.year - 1 : now.year;
+      
+      return _history
+          .where((e) => e.dateTime.year == actualYear && e.dateTime.month == actualMonth)
+          .fold(0.0, (sum, item) => sum + item.calories);
+    });
+  }
+
+  Map<String, double> getMacrosForPeriod(int days) {
+    final now = DateTime.now();
+    final cutoff = now.subtract(Duration(days: days));
+    double p = 0, c = 0, f = 0;
+    
+    for (var entry in _history) {
+      if (entry.dateTime.isAfter(cutoff)) {
+        p += entry.protein;
+        c += entry.carbs;
+        f += entry.fat;
+      }
+    }
+    return {'protein': p, 'carbs': c, 'fat': f};
   }
 
   Future<void> addEntry(NutritionResult result, String imagePath) async {

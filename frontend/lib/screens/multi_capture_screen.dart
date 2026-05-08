@@ -6,23 +6,12 @@ import '../theme/app_theme.dart';
 import 'analysis_screen.dart';
 import 'ar_capture_screen.dart';
 
-/// Angle guide info for each capture slot
-class _AngleGuide {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  const _AngleGuide(this.title, this.subtitle, this.icon);
-}
-
-const List<_AngleGuide> _guides = [
-  _AngleGuide('Top View', 'Directly above the food', Icons.arrow_downward_rounded),
-  _AngleGuide('Side View', '45° angle from the side', Icons.rotate_90_degrees_cw_rounded),
-  _AngleGuide('Close-up', 'Zoom into the food details', Icons.zoom_in_rounded),
-  _AngleGuide('Another Angle', 'Any other perspective', Icons.crop_rotate_rounded),
-];
+const Color neonGreen = Color(0xFF00FF88);
+const Color darkBg = Color(0xFF0F141A);
+const Color cardBg = Color(0xFF1E2631);
+const Color emptyCardBg = Color(0xFF161B22);
 
 class MultiCaptureScreen extends StatefulWidget {
-  /// Pre-loaded images (e.g. from gallery multi-pick)
   final List<XFile>? initialImages;
 
   const MultiCaptureScreen({super.key, this.initialImages});
@@ -31,29 +20,17 @@ class MultiCaptureScreen extends StatefulWidget {
   State<MultiCaptureScreen> createState() => _MultiCaptureScreenState();
 }
 
-class _MultiCaptureScreenState extends State<MultiCaptureScreen>
-    with TickerProviderStateMixin {
+class _MultiCaptureScreenState extends State<MultiCaptureScreen> {
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
   final Map<int, Uint8List> _thumbnails = {};
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnim;
 
-  static const int _maxImages = 4;
-  static const int _minImages = 2;
+  static const int _maxImages = 6;
+  static const int _minImages = 1;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    // Load pre-selected images if any
     if (widget.initialImages != null) {
       for (final img in widget.initialImages!) {
         if (_images.length < _maxImages) {
@@ -64,12 +41,6 @@ class _MultiCaptureScreenState extends State<MultiCaptureScreen>
     }
   }
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadThumbnail(int index, XFile file) async {
     final bytes = await file.readAsBytes();
     if (mounted) {
@@ -77,103 +48,31 @@ class _MultiCaptureScreenState extends State<MultiCaptureScreen>
     }
   }
 
-  Future<void> _captureImage(int slotIndex) async {
-    final source = await _showSourcePicker();
-    if (source == null) return;
-
+  Future<void> _captureImage() async {
+    if (_images.length >= _maxImages) return;
+    
     final XFile? image = await _picker.pickImage(
-      source: source,
+      source: ImageSource.camera,
       imageQuality: 90,
     );
+    
     if (image != null && mounted) {
       setState(() {
-        if (slotIndex < _images.length) {
-          // Replace existing
-          _images[slotIndex] = image;
-        } else {
-          // Add new
-          _images.add(image);
-        }
+        _images.add(image);
       });
-      _loadThumbnail(slotIndex, image);
+      _loadThumbnail(_images.length - 1, image);
     }
   }
 
-  Future<ImageSource?> _showSourcePicker() async {
-    return showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: AppTheme.surfaceColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              'Choose Source',
-              style: GoogleFonts.outfit(
-                fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _SourceOption(
-                    icon: Icons.camera_alt_rounded,
-                    label: 'Camera',
-                    color: AppTheme.primaryColor,
-                    onTap: () => Navigator.pop(ctx, ImageSource.camera),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _SourceOption(
-                    icon: Icons.photo_library_rounded,
-                    label: 'Gallery',
-                    color: const Color(0xFF4FA3E0),
-                    onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _removeImage(int index) {
+  void _clearAll() {
     setState(() {
-      _images.removeAt(index);
-      // Rebuild thumbnail map
-      final newThumbs = <int, Uint8List>{};
-      _thumbnails.forEach((k, v) {
-        if (k < index) {
-          newThumbs[k] = v;
-        } else if (k > index) {
-          newThumbs[k - 1] = v;
-        }
-      });
+      _images.clear();
       _thumbnails.clear();
-      _thumbnails.addAll(newThumbs);
     });
   }
 
   void _startAnalysis() {
     if (_images.length < _minImages) return;
-
     Navigator.push(
       context,
       PageRouteBuilder(
@@ -189,496 +88,398 @@ class _MultiCaptureScreenState extends State<MultiCaptureScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bool canAnalyze = _images.length >= _minImages;
-
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: darkBg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.view_in_ar_rounded, color: neonGreen),
+            onPressed: () => Navigator.pushReplacement(
+                context, MaterialPageRoute(builder: (_) => const ArCaptureScreen())),
+            tooltip: 'AR Mode',
+          ),
+        ],
+      ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // App bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Capture Food',
-                    style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                  // AR Mode button
-                  GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ArCaptureScreen()),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 800;
+
+            if (isWide) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildHeader(),
+                              const SizedBox(height: 24),
+                              Expanded(child: _buildCameraPreview()),
+                              const SizedBox(height: 24),
+                              _buildBottomActions(),
+                            ],
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.view_in_ar_rounded,
-                              color: Colors.white, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            'AR Mode',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        const SizedBox(width: 48),
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildCapturesHeader(),
+                              const SizedBox(height: 16),
+                              Expanded(child: _buildGrid()),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: canAnalyze
-                          ? AppTheme.primaryColor.withOpacity(0.2)
-                          : Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: canAnalyze
-                            ? AppTheme.primaryColor.withOpacity(0.4)
-                            : Colors.white.withOpacity(0.1),
-                      ),
-                    ),
-                    child: Text(
-                      '${_images.length}/$_maxImages',
-                      style: TextStyle(
-                        color: canAnalyze ? AppTheme.primaryColor : Colors.white54,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Info banner
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryColor.withOpacity(0.1),
-                      AppTheme.primaryColor.withOpacity(0.03),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.info_outline_rounded,
-                          color: AppTheme.primaryColor, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Multiple angles = better accuracy',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Take ${_minImages}–$_maxImages photos from different angles for precise portion & weight estimation.',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.55),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              );
+            }
 
-            const SizedBox(height: 24),
-
-            // Image grid
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount: _maxImages,
-                  itemBuilder: (context, index) {
-                    final hasImage = index < _images.length;
-                    final guide = _guides[index];
-
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: hasImage
-                          ? _FilledSlot(
-                              key: ValueKey('filled_$index'),
-                              bytes: _thumbnails[index],
-                              guide: guide,
-                              onRemove: () => _removeImage(index),
-                              onReplace: () => _captureImage(index),
-                            )
-                          : _EmptySlot(
-                              key: ValueKey('empty_$index'),
-                              guide: guide,
-                              isNext: index == _images.length,
-                              pulseAnim: _pulseAnim,
-                              onTap: index == _images.length
-                                  ? () => _captureImage(index)
-                                  : null,
-                            ),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // Bottom action area
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            // Mobile layout
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!canAnalyze)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'Add at least $_minImages photos to continue',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.45),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 58,
-                    child: ElevatedButton(
-                      onPressed: canAnalyze ? _startAnalysis : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: canAnalyze
-                            ? AppTheme.primaryColor
-                            : Colors.white.withOpacity(0.06),
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.white.withOpacity(0.06),
-                        disabledForegroundColor: Colors.white30,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        elevation: canAnalyze ? 6 : 0,
-                        shadowColor: AppTheme.primaryColor.withOpacity(0.4),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            canAnalyze
-                                ? Icons.document_scanner_rounded
-                                : Icons.camera_alt_outlined,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            canAnalyze
-                                ? 'Analyze ${_images.length} Photos'
-                                : 'Add More Photos',
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildHeader(),
+                  const SizedBox(height: 24),
+                  Expanded(flex: 4, child: _buildCameraPreview()),
+                  const SizedBox(height: 24),
+                  _buildCapturesHeader(),
+                  const SizedBox(height: 16),
+                  Expanded(flex: 5, child: _buildGrid()),
+                  const SizedBox(height: 24),
+                  _buildBottomActions(),
+                  const SizedBox(height: 16),
                 ],
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
-}
 
-/// A filled image slot with thumbnail, label, and remove/replace actions
-class _FilledSlot extends StatelessWidget {
-  final Uint8List? bytes;
-  final _AngleGuide guide;
-  final VoidCallback onRemove;
-  final VoidCallback onReplace;
-
-  const _FilledSlot({
-    super.key,
-    required this.bytes,
-    required this.guide,
-    required this.onRemove,
-    required this.onReplace,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onReplace,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.4), width: 2),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Stack(
-            fit: StackFit.expand,
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image
-              if (bytes != null)
-                Image.memory(bytes!, fit: BoxFit.cover)
-              else
-                const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-
-              // Bottom gradient + label
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(12, 24, 12, 10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.75)],
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(guide.icon, color: AppTheme.primaryColor, size: 16),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          guide.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              Text(
+                'Snap Food',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-
-              // Check badge
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
-                ),
-              ),
-
-              // Remove button
-              Positioned(
-                top: 6,
-                right: 6,
-                child: GestureDetector(
-                  onTap: onRemove,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                  ),
+              const SizedBox(height: 4),
+              Text(
+                'Capture 1–6 angles for best accuracy',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 14,
                 ),
               ),
             ],
           ),
         ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: neonGreen.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            '${_images.length}/$_maxImages',
+            style: GoogleFonts.outfit(
+              color: neonGreen,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCameraPreview() {
+    return GestureDetector(
+      onTap: _images.length < _maxImages ? _captureImage : null,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Current viewfinder content
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Reticle
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: neonGreen.withOpacity(0.6), width: 2),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: neonGreen,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Point at your food',
+                  style: TextStyle(
+                    color: neonGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            
+            // Neon Green Corners
+            Positioned(top: 24, left: 24, child: _buildCorner(0)),
+            Positioned(top: 24, right: 24, child: _buildCorner(1)),
+            Positioned(bottom: 24, right: 24, child: _buildCorner(2)),
+            Positioned(bottom: 24, left: 24, child: _buildCorner(3)),
+
+            // Bottom Badges
+            Positioned(
+              bottom: 24,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildAngleBadge('Top', true),
+                  const SizedBox(width: 8),
+                  _buildAngleBadge('Side', false),
+                  const SizedBox(width: 8),
+                  _buildAngleBadge('45°', false),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
 
-/// An empty slot waiting for an image
-class _EmptySlot extends StatelessWidget {
-  final _AngleGuide guide;
-  final bool isNext;
-  final Animation<double> pulseAnim;
-  final VoidCallback? onTap;
+  Widget _buildAngleBadge(String text, bool isSelected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: darkBg.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isSelected ? neonGreen : Colors.white54,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 
-  const _EmptySlot({
-    super.key,
-    required this.guide,
-    required this.isNext,
-    required this.pulseAnim,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget content = GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isNext
-              ? AppTheme.primaryColor.withOpacity(0.06)
-              : Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isNext
-                ? AppTheme.primaryColor.withOpacity(0.35)
-                : Colors.white.withOpacity(0.08),
-            width: isNext ? 2 : 1,
+  Widget _buildCapturesHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'CAPTURES',
+          style: GoogleFonts.outfit(
+            color: Colors.white54,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.5,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
+        GestureDetector(
+          onTap: _images.isNotEmpty ? _clearAll : null,
+          child: Text(
+            'Clear all',
+            style: TextStyle(
+              color: _images.isNotEmpty ? neonGreen : Colors.white30,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGrid() {
+    return GridView.builder(
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.95,
+      ),
+      itemCount: _maxImages,
+      itemBuilder: (context, index) {
+        final hasImage = index < _images.length;
+        
+        return Container(
+          decoration: BoxDecoration(
+            color: hasImage ? cardBg : emptyCardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasImage ? neonGreen : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: hasImage
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (_thumbnails[index] != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14.5),
+                        child: Image.memory(
+                          _thumbnails[index]!,
+                          fit: BoxFit.cover,
+                          color: Colors.black.withOpacity(0.4), // Darken to match design
+                          colorBlendMode: BlendMode.darken,
+                        ),
+                      ),
+                    const Center(
+                      child: Icon(
+                        Icons.check,
+                        color: neonGreen,
+                        size: 28,
+                      ),
+                    ),
+                  ],
+                )
+              : Center(
+                  child: Icon(
+                    Icons.add,
+                    color: Colors.white.withOpacity(0.15),
+                    size: 24,
+                  ),
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomActions() {
+    final canAnalyze = _images.length >= _minImages;
+
+    return Row(
+      children: [
+        // Capture button
+        Expanded(
+          flex: 1,
+          child: GestureDetector(
+            onTap: _images.length < _maxImages ? _captureImage : null,
+            child: Container(
+              height: 64,
               decoration: BoxDecoration(
-                color: isNext
-                    ? AppTheme.primaryColor.withOpacity(0.15)
-                    : Colors.white.withOpacity(0.05),
-                shape: BoxShape.circle,
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
               ),
-              child: Icon(
-                isNext ? Icons.add_a_photo_rounded : guide.icon,
-                color: isNext ? AppTheme.primaryColor : Colors.white30,
-                size: 28,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.camera_alt_outlined,
+                    color: Colors.white.withOpacity(0.7),
+                    size: 22,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Capture',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              guide.title,
-              style: TextStyle(
-                color: isNext ? Colors.white : Colors.white38,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 16),
+        // Analyze button
+        Expanded(
+          flex: 2,
+          child: GestureDetector(
+            onTap: canAnalyze ? _startAnalysis : null,
+            child: Container(
+              height: 64,
+              decoration: BoxDecoration(
+                color: canAnalyze ? neonGreen : cardBg,
+                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-            const SizedBox(height: 3),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                guide.subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: isNext ? Colors.white.withOpacity(0.45) : Colors.white24,
-                  fontSize: 11,
+              child: Center(
+                child: Text(
+                  'Analyze →',
+                  style: GoogleFonts.outfit(
+                    color: canAnalyze ? Colors.black : Colors.white30,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
-
-    // Pulse animation only on the "next" slot
-    if (isNext) {
-      return AnimatedBuilder(
-        animation: pulseAnim,
-        builder: (context, child) => Transform.scale(
-          scale: pulseAnim.value,
-          child: child,
-        ),
-        child: content,
-      );
-    }
-
-    return content;
   }
-}
 
-/// Bottom sheet source picker option
-class _SourceOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _SourceOption({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+  Widget _buildCorner(int rotationIndex) {
+    return RotatedBox(
+      quarterTurns: rotationIndex,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.25)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
+        width: 24,
+        height: 24,
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: neonGreen, width: 2.5),
+            left: BorderSide(color: neonGreen, width: 2.5),
+          ),
         ),
       ),
     );

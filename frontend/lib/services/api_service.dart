@@ -238,4 +238,18 @@ class ApiService {
       throw Exception('Failed to process barcode image: ${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> updateUser(Map<String, dynamic> data) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/auth/update'),
+      headers: _headers,
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update profile: ${response.body}');
+    }
+  }
 }

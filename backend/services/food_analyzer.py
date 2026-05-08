@@ -395,30 +395,40 @@ def _call_vlm_single(image_path: str) -> Optional[Dict[str, Any]]:
         try:
             with Image.open(final_img_path) as img:
                 h, w = img.size[1], img.size[0]
-                max_dim = 1024
+                max_dim = 512
                 if max(h, w) > max_dim:
                     img.thumbnail((max_dim, max_dim))
                 
                 buffered = io.BytesIO()
-                img.save(buffered, format="JPEG", quality=85)
+                img.save(buffered, format="JPEG", quality=65)
                 base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
         except Exception as e:
             print(f"WARNING: PIL resize failed: {e}. Falling back to raw file.", flush=True)
             with open(final_img_path, "rb") as f:
                 base64_image = base64.b64encode(f.read()).decode("utf-8")
 
-        response = _client.chat.completions.create(
-            model=_AI_MODEL,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
-                ],
-            }],
-            max_tokens=400,
-            timeout=45.0,
-        )
+        import time
+        response = None
+        for attempt in range(3):
+            try:
+                response = _client.chat.completions.create(
+                    model=_AI_MODEL,
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+                        ],
+                    }],
+                    max_tokens=400,
+                    timeout=120.0,
+                )
+                break
+            except Exception as e:
+                print(f"WARNING: [Stage 1] VLM Attempt {attempt+1} failed: {e}", flush=True)
+                if attempt == 2:
+                    raise e
+                time.sleep(1.5)
 
         raw = response.choices[0].message.content.strip()
         print(f"INFO: [Stage 1] VLM response: {raw}", flush=True)
@@ -491,12 +501,12 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
                         img = img.convert('RGB')
                         
                     h, w = img.size[1], img.size[0]
-                    max_dim = 640 
+                    max_dim = 512 
                     if max(h, w) > max_dim:
                         img.thumbnail((max_dim, max_dim))
                     
                     buffered = io.BytesIO()
-                    img.save(buffered, format="JPEG", quality=75) # Lower quality to save space
+                    img.save(buffered, format="JPEG", quality=60) # Lower quality to save space
                     b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
                     
                 # Explicit cleanup to free memory immediately
@@ -513,12 +523,22 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
             })
             print(f"INFO:   Attached image {i+1} (Resized & Memory-Optimized): {os.path.basename(img_path)}", flush=True)
 
-        response = _client.chat.completions.create(
-            model=_AI_MODEL,
-            messages=[{"role": "user", "content": content_parts}],
-            max_tokens=400,
-            timeout=60.0,
-        )
+        import time
+        response = None
+        for attempt in range(3):
+            try:
+                response = _client.chat.completions.create(
+                    model=_AI_MODEL,
+                    messages=[{"role": "user", "content": content_parts}],
+                    max_tokens=400,
+                    timeout=120.0,
+                )
+                break
+            except Exception as e:
+                print(f"WARNING: [Stage 1] Multi-VLM Attempt {attempt+1} failed: {e}", flush=True)
+                if attempt == 2:
+                    raise e
+                time.sleep(1.5)
 
         raw = response.choices[0].message.content.strip()
         print(f"INFO: [Stage 1] Multi-VLM response: {raw}", flush=True)
@@ -710,11 +730,11 @@ def _ground_prediction(
 def _empty_prediction() -> Dict[str, Any]:
     """Return a default empty prediction."""
     return {
-        "food": "Unknown",
+        "food": "No Food Detected",
         "confidence": 0.0,
         "nutrition": None,
         "weight_grams": 0.0,
-        "portion_description": "Unknown",
+        "portion_description": "N/A",
         "engine": "None",
         "grounded": False,
     }
@@ -736,6 +756,10 @@ def _prediction_to_response(prediction: Dict[str, Any]) -> Dict[str, Any]:
     weight_grams = prediction.get("weight_grams", 0.0)
     portion_desc = prediction.get("portion_description", "Standard Serving")
     grounded = prediction.get("grounded", False)
+    if "empty plate" in food_name.lower() or "no food" in food_name.lower():
+        weight_grams = 0.0
+        portion_desc = "N/A"
+        food_name = "No Food Detected"
 
     if nutrition:
         return {

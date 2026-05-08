@@ -1,5 +1,6 @@
 flutter_*.zip
-flutter_*.tar.xz
+flutter_windows*.tar.xz
+# flutter_linux_3.22.0.tar.xz is intentionally NOT excluded (used in Dockerfile COPY)
 flutter/
 flutter_sdk/
 .dart_tool/

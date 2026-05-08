@@ -1,265 +1,202 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/history_provider.dart';
-import 'analytics_screen.dart';
+import '../services/theme_provider.dart';
 import 'package:intl/intl.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final historyProvider = Provider.of<HistoryProvider>(context);
-    final history = historyProvider.history;
-    final totalToday = historyProvider.totalToday;
-
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              Text('Food Journal',
-                  style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white)),
-              Text('Your daily nutritional log',
-                  style: TextStyle(
-                      color: Colors.white.withOpacity(0.5), fontSize: 14)),
-              const SizedBox(height: 24),
-              // Today summary card
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8))
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Today's Total",
-                            style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        const SizedBox(height: 4),
-                        Text('${totalToday.toInt()} kcal',
-                            style: GoogleFonts.outfit(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        const SizedBox(height: 4),
-                        Text(
-                            'Goal: 2000 kcal  •  Remaining: ${(2000 - totalToday).toInt()}',
-                            style: const TextStyle(
-                                color: Colors.white60, fontSize: 12)),
-                      ],
-                    ),
-                    const CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.white12,
-                      child: Icon(Icons.local_fire_department_rounded,
-                          color: Colors.orangeAccent, size: 32),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              _buildAnalyticsCard(context),
-              const SizedBox(height: 20),
-              // Daily Macro Progress
-              _DailyMacroRow(
-                protein: historyProvider.totalProteinToday,
-                carbs: historyProvider.totalCarbsToday,
-                fat: historyProvider.totalFatToday,
-              ),
-              const SizedBox(height: 24),
-              Text('Recent Scans',
-                  style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white)),
-              const SizedBox(height: 12),
-              Expanded(
-                child: history.isEmpty
-                    ? Center(
-                        child: Text('No scans yet. Start by snapping a photo!',
-                            style: TextStyle(color: Colors.white38)))
-                    : ListView.separated(
-                        itemCount: history.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final item = history[index];
-                          return _HistoryTile(item: item);
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnalyticsCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-          context, MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.analytics_rounded, color: AppTheme.primaryColor),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'View Weekly Trends & AI Insights',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14),
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white38),
-          ],
-        ),
-      ),
-    );
-  }
+  State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryTile extends StatelessWidget {
-  final HistoryEntry item;
-  const _HistoryTile({required this.item});
+class _HistoryScreenState extends State<HistoryScreen> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+    final historyProvider = context.watch<HistoryProvider>();
+    final history = historyProvider.history;
+
+    final isDark   = context.watch<ThemeProvider>().isDark;
+    final bg       = isDark ? AppTheme.darkBg       : AppTheme.lightBg;
+    final surf     = isDark ? AppTheme.darkSurface  : AppTheme.lightSurface;
+    final border   = isDark ? AppTheme.darkBorder   : AppTheme.lightBorder;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textMuted   = isDark ? AppTheme.darkTextMuted   : AppTheme.lightTextMuted;
+    final accent = isDark ? AppTheme.primaryColor : AppTheme.primaryDark;
+
+    // Filter by search query
+    final filteredHistory = history.where((item) {
+      return item.foodName.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+
+    // Group by Today vs Yesterday (simplified for UI demonstration)
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+    final yesterdayStr = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
+
+    final List<HistoryEntry> todayItems = [];
+    final List<HistoryEntry> yesterdayItems = [];
+    final List<HistoryEntry> olderItems = [];
+
+    for (var item in filteredHistory) {
+      final dateStr = DateFormat('yyyy-MM-dd').format(item.dateTime);
+      if (dateStr == todayStr) {
+        todayItems.add(item);
+      } else if (dateStr == yesterdayStr) {
+        yesterdayItems.add(item);
+      } else {
+        olderItems.add(item);
+      }
+    }
+
+    double calcCals(List<HistoryEntry> items) => items.fold(0.0, (sum, i) => sum + i.calories);
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text('History', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 24, color: textPrimary)),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Center(
+              child: Text('Today', style: TextStyle(color: accent, fontWeight: FontWeight.w600, fontSize: 13)),
+            ),
+          )
+        ],
       ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: Column(
+              children: [
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: surf,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: border),
+                  ),
+                  child: TextField(
+                    style: TextStyle(color: textPrimary),
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      icon: Icon(Icons.search, color: textMuted, size: 20),
+                      hintText: 'Search history...',
+                      hintStyle: TextStyle(color: textMuted, fontSize: 15),
+                      border: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                    ),
+                ),
+              ),
+            ),
+            
+            // List
+            Expanded(
+              child: filteredHistory.isEmpty
+                  ? Center(child: Text('No data yet — start logging meals', style: TextStyle(color: textMuted)))
+                  : ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        if (todayItems.isNotEmpty) ...[
+                          _buildGroupHeader('TODAY', calcCals(todayItems), textMuted),
+                          ...todayItems.map((e) => _buildHistoryRow(e, surf, textPrimary, textMuted, accent)),
+                          const SizedBox(height: 24),
+                        ],
+                        if (yesterdayItems.isNotEmpty) ...[
+                          _buildGroupHeader('YESTERDAY', calcCals(yesterdayItems), textMuted),
+                          ...yesterdayItems.map((e) => _buildHistoryRow(e, surf, textPrimary, textMuted, accent)),
+                          const SizedBox(height: 24),
+                        ],
+                        if (olderItems.isNotEmpty) ...[
+                          _buildGroupHeader('OLDER', calcCals(olderItems), textMuted),
+                          ...olderItems.map((e) => _buildHistoryRow(e, surf, textPrimary, textMuted, accent)),
+                        ]
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+);
+  }
+
+  Widget _buildGroupHeader(String title, double cals, Color textMuted) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Text(
+        '$title • ${cals.toInt()} KCAL',
+        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: textMuted),
+      ),
+    );
+  }
+
+  Widget _buildHistoryRow(HistoryEntry item, Color surf, Color textPrimary, Color textMuted, Color accent) {
+    // Generate mock macros if they are mostly 0, just to match the mockup style
+    // The mockup shows "12P 28C 18F"
+    int p = item.protein.toInt();
+    int c = item.carbs.toInt();
+    int f = item.fat.toInt();
+    
+    // Assign a default meal type
+    String mealType = 'Snack';
+    if (item.dateTime.hour < 11) mealType = 'Breakfast';
+    else if (item.dateTime.hour < 15) mealType = 'Lunch';
+    else if (item.dateTime.hour > 18) mealType = 'Dinner';
+
+    final timeStr = DateFormat('h:mm a').format(item.dateTime);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 52,
-              height: 52,
-              child: (item.imagePath.startsWith('http') || item.imagePath.startsWith('blob:'))
-                ? Image.network(item.imagePath, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())
-                : (item.imagePath.isEmpty 
-                    ? _buildPlaceholder() 
-                    : kIsWeb 
-                      ? _buildPlaceholder() 
-                      : Image.network(item.imagePath, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())),
+          // Icon Box
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(
+              color: surf, // slightly lighter than bg
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(item.emoji.isNotEmpty ? item.emoji : '🍽️', style: const TextStyle(fontSize: 24)),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
+          // Texts
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.foodName,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15)),
-                const SizedBox(height: 2),
-                Text(DateFormat('MMM d, h:mm a').format(item.dateTime),
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.45), fontSize: 12)),
+                Text(item.foodName, style: GoogleFonts.outfit(color: textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('$timeStr • $mealType • ${p}P ${c}C ${f}F', style: TextStyle(color: textMuted, fontSize: 12)),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('${item.calories.toInt()} kcal',
-                  style: const TextStyle(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14)),
-              const SizedBox(height: 2),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white24, size: 18),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlaceholder() {
-    return Container(
-      color: AppTheme.primaryColor.withOpacity(0.12),
-      child: Center(child: Text(item.emoji, style: const TextStyle(fontSize: 22))),
-    );
-  }
-}
-
-class _DailyMacroRow extends StatelessWidget {
-  final double protein, carbs, fat;
-  const _DailyMacroRow({required this.protein, required this.carbs, required this.fat});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: _MicroMacroItem(label: 'Protein', value: protein, color: const Color(0xFF4FA3E0))),
-        const SizedBox(width: 8),
-        Expanded(child: _MicroMacroItem(label: 'Carbs', value: carbs, color: const Color(0xFFFF9057))),
-        const SizedBox(width: 8),
-        Expanded(child: _MicroMacroItem(label: 'Fat', value: fat, color: const Color(0xFFFF6B8A))),
-      ],
-    );
-  }
-}
-
-class _MicroMacroItem extends StatelessWidget {
-  final String label;
-  final double value;
-  final Color color;
-
-  const _MicroMacroItem({required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.1)),
-      ),
-      child: Column(
-        children: [
-          Text('${value.toInt()}g', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
-          Text(label, style: TextStyle(color: Colors.white38, fontSize: 10)),
+          // Calories
+          Text(item.calories.toInt().toString(), style: GoogleFonts.outfit(color: accent, fontSize: 20, fontWeight: FontWeight.bold)),
         ],
       ),
     );

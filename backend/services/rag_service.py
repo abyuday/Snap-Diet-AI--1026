@@ -518,7 +518,7 @@ class RAGService:
         return None
 
     def search_all_by_keyword(self, query: str) -> List[Dict[str, Any]]:
-        """Finds up to 10 foods that match the substring."""
+        """Finds up to 10 foods that match using exact, substring, word overlap, fuzzy, and semantic strategies."""
         query = query.strip().lower()
         if not query:
             return []
@@ -526,16 +526,63 @@ class RAGService:
         results = []
         seen_names = set()
         
-        for name, rec in self._name_lookup.items():
-            # Match directly against the formal food_name to avoid partial word duplication issues
+        def add_rec(rec):
             food_name = rec["food_name"]
-            if query in food_name.lower() and food_name not in seen_names:
+            if food_name not in seen_names:
                 results.append(rec)
                 seen_names.add(food_name)
+
+        # 1. Exact Keyword Match
+        for name, rec in self._name_lookup.items():
+            if query == rec["food_name"].lower():
+                add_rec(rec)
+                
+        # 2. Exact Substring Match
+        if len(results) < 10:
+            for name, rec in self._name_lookup.items():
+                if query in rec["food_name"].lower():
+                    add_rec(rec)
+                    if len(results) >= 10:
+                        break
+                        
+        # 3. Word Overlap Match
+        if len(results) < 10:
+            query_words = set(query.split())
+            for name, rec in self._name_lookup.items():
+                food_words = set(rec["food_name"].lower().split())
+                if query_words.issubset(food_words):
+                    add_rec(rec)
+                    if len(results) >= 10:
+                        break
+                        
+        # 4. Fuzzy Match
+        if len(results) < 10:
+            name_to_rec = {rec["food_name"].lower(): rec for rec in self._name_lookup.values()}
+            all_lower_names = list(name_to_rec.keys())
+            import difflib
+            matches = difflib.get_close_matches(query, all_lower_names, n=10, cutoff=0.5)
+            for match in matches:
+                add_rec(name_to_rec[match])
                 if len(results) >= 10:
                     break
+                    
+        # 5. Semantic Search (Vector DB) Fallback
+        if len(results) < 10 and self.vector_db:
+            try:
+                docs = self.vector_db.similarity_search(query, k=10)
+                for doc in docs:
+                    meta = doc.metadata
+                    name = meta.get("name") or meta.get("food_name")
+                    if name:
+                        name_lower = str(name).lower()
+                        if name_lower in self._name_lookup:
+                            add_rec(self._name_lookup[name_lower])
+                    if len(results) >= 10:
+                        break
+            except Exception:
+                pass
         
-        return results
+        return results[:10]
 
     def query_nutrition(self, query: str) -> Optional[Dict[str, Any]]:
         """
@@ -608,6 +655,15 @@ class RAGService:
             }
         """
         food_lower = food_name.lower().strip()
+        if "empty plate" in food_lower or "no food" in food_lower:
+            return {
+                "food_name": "No Food Detected",
+                "estimated_weight_grams": 0.0,
+                "portion_description": "N/A",
+                "standard_portion_grams": 0.0,
+                "portion_count": 0.0,
+                "grounded": True,
+            }
 
         # Try exact match first, then fuzzy
         portion_info = self._find_portion_info(food_lower)

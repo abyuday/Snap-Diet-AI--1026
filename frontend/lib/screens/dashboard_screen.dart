@@ -5,530 +5,604 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/history_provider.dart';
 import '../services/user_provider.dart';
+import '../services/theme_provider.dart';
+import 'multi_capture_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final history = context.watch<HistoryProvider>();
-    final user = context.watch<UserProvider>();
+    final isDark   = context.watch<ThemeProvider>().isDark;
+    final history  = context.watch<HistoryProvider>();
+    final user     = context.watch<UserProvider>();
+    final accent   = isDark ? AppTheme.primaryColor : AppTheme.primaryDark;
+    final bg       = isDark ? AppTheme.darkBg       : AppTheme.lightBg;
+    final surf     = isDark ? AppTheme.darkSurface   : AppTheme.lightSurface;
+    final surf2    = isDark ? AppTheme.darkSurface2  : AppTheme.lightSurface2;
+    final border   = isDark ? AppTheme.darkBorder    : AppTheme.lightBorder;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textMuted   = isDark ? AppTheme.darkTextMuted   : AppTheme.lightTextMuted;
+    final shadowColor = isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.04);
 
-    // Daily goals — from UserProvider or defaults
-    final double calGoal = user.calorieGoal.toDouble().clamp(1, 9999);
-    const double protGoal = 150;
-    const double carbGoal = 250;
-    const double fatGoal = 60;
+    final calGoal  = user.calorieGoal.toDouble().clamp(1.0, 9999.0).toDouble();
+    final protGoal = user.proteinGoal.toDouble().clamp(1.0, 999.0).toDouble();
+    final carbGoal = user.carbsGoal.toDouble().clamp(1.0, 999.0).toDouble();
+    final fatGoal  = user.fatGoal.toDouble().clamp(1.0, 999.0).toDouble();
 
-    final double calEaten = history.totalToday;
-    final double protEaten = history.totalProteinToday;
-    final double carbEaten = history.totalCarbsToday;
-    final double fatEaten = history.totalFatToday;
+    final calEaten  = history.totalSelectedDate;
+    final protEaten = history.totalProteinSelectedDate;
+    final carbEaten = history.totalCarbsSelectedDate;
+    final fatEaten  = history.totalFatSelectedDate;
 
-    final todayEntries = history.history
-        .where((e) {
-          final now = DateTime.now();
-          return e.dateTime.year == now.year &&
-              e.dateTime.month == now.month &&
-              e.dateTime.day == now.day;
-        })
-        .toList();
+    final now = DateTime.now();
+    final sel = history.selectedDate;
+    final isToday = sel.year == now.year && sel.month == now.month && sel.day == now.day;
+
+    final days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final dateStr = '${days[sel.weekday-1]}, ${sel.day} ${months[sel.month-1]} · ${sel.year}';
+
+    final selectedEntries = history.selectedDateEntries;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Today\'s Dashboard',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Date header
-            _buildDateHeader(),
-            const SizedBox(height: 20),
-
-            // Main calorie ring
-            _buildCalorieRing(calEaten, calGoal),
-            const SizedBox(height: 20),
-
-            // Macro goal cards
-            _buildMacroCards(protEaten, protGoal, carbEaten, carbGoal, fatEaten, fatGoal),
-            const SizedBox(height: 24),
-
-            // Macro distribution bar
-            _buildDistributionBar(protEaten, carbEaten, fatEaten),
-            const SizedBox(height: 24),
-
-            // Smart tip
-            _buildSmartTip(calEaten, calGoal, protEaten, protGoal),
-            const SizedBox(height: 24),
-
-            // Today's meals list
-            _buildTodayMeals(todayEntries),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDateHeader() {
-    final now = DateTime.now();
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final dayName = days[now.weekday - 1];
-    final formatted = '$dayName, ${now.day} ${months[now.month - 1]} ${now.year}';
-
-    return Text(
-      formatted,
-      style: TextStyle(color: Colors.white54, fontSize: 13, letterSpacing: 0.4),
-    );
-  }
-
-  Widget _buildCalorieRing(double eaten, double goal) {
-    final progress = (eaten / goal).clamp(0.0, 1.0);
-    final remaining = (goal - eaten).clamp(0.0, goal);
-    final isOver = eaten > goal;
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        children: [
-          Row(
+      backgroundColor: bg,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+              child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Calorie Budget',
-                style: GoogleFonts.outfit(
-                    fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isOver
-                      ? Colors.redAccent.withOpacity(0.15)
-                      : AppTheme.primaryColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isOver ? 'Over Goal' : '${remaining.toInt()} left',
-                  style: TextStyle(
-                    color: isOver ? Colors.redAccent : AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              // Ring chart
-              SizedBox(
-                width: 140,
-                height: 140,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    PieChart(
-                      PieChartData(
-                        startDegreeOffset: -90,
-                        sectionsSpace: 0,
-                        centerSpaceRadius: 50,
-                        sections: [
-                          PieChartSectionData(
-                            value: progress,
-                            color: isOver ? Colors.redAccent : AppTheme.primaryColor,
-                            radius: 18,
-                            title: '',
-                          ),
-                          PieChartSectionData(
-                            value: 1.0 - progress,
-                            color: Colors.white10,
-                            radius: 14,
-                            title: '',
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 24),
+
+              // Header
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          eaten.toInt().toString(),
-                          style: GoogleFonts.outfit(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
-                        Text(
-                          'kcal',
-                          style: TextStyle(color: Colors.white38, fontSize: 12),
-                        ),
+                        Text('Dashboard', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: textPrimary)),
+                        Text(dateStr, style: GoogleFonts.outfit(fontSize: 13, color: textMuted)),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              // Breakdown stats
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _statRow('Goal', '${goal.toInt()} kcal', Colors.white38),
-                    const SizedBox(height: 12),
-                    _statRow('Eaten', '${eaten.toInt()} kcal', AppTheme.primaryColor),
-                    const SizedBox(height: 12),
-                    _statRow(
-                      isOver ? 'Over by' : 'Remaining',
-                      '${remaining.toInt()} kcal',
-                      isOver ? Colors.redAccent : Colors.greenAccent,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.calendar_month_rounded, color: accent),
+                    onPressed: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: sel,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: isDark 
+                                ? ColorScheme.dark(primary: accent, onPrimary: Colors.white, onSurface: textPrimary)
+                                : ColorScheme.light(primary: accent, onPrimary: Colors.white, onSurface: textPrimary),
+                              dialogBackgroundColor: surf,
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        history.setSelectedDate(picked);
+                      }
+                    },
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isToday ? accent.withOpacity(0.15) : surf2,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: isToday ? accent.withOpacity(0.5) : border),
                     ),
-                  ],
-                ),
+                    child: Text(isToday ? 'Today' : 'Past', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: isToday ? accent : textMuted)),
+                  ),
+                ],
               ),
+              const SizedBox(height: 24),
+
+              const SizedBox(height: 20),
+
+              // Calendar Strip
+              _buildCalendarStrip(context, history, surf, border, accent, textPrimary, textMuted),
+              const SizedBox(height: 24),
+
+              // Daily Calories card
+              _buildCalorieCard(calEaten, calGoal, accent, surf, border, textPrimary, textMuted, shadowColor),
+              const SizedBox(height: 16),
+
+              // Macros Today
+              _buildMacrosCard(protEaten, protGoal, carbEaten, carbGoal, fatEaten, fatGoal, accent, surf, border, textPrimary, textMuted, shadowColor),
+              const SizedBox(height: 16),
+
+              // Water Intake
+              _buildWaterCard(user, accent, surf, border, textPrimary, textMuted, shadowColor),
+              const SizedBox(height: 16),
+
+              // Meal timeline
+              _buildMealTimeline(context, selectedEntries, accent, surf, surf2, border, textPrimary, textMuted),
             ],
           ),
-        ],
+        ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _statRow(String label, String value, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(color: Colors.white54, fontSize: 13)),
-        Text(value,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-      ],
-    );
-  }
+  Widget _buildCalendarStrip(BuildContext context, HistoryProvider history, Color surf, Color border, Color accent, Color textPrimary, Color textMuted) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // Generate last 30 days
+    final List<DateTime> dates = List.generate(30, (index) => today.subtract(Duration(days: 29 - index)));
 
-  Widget _buildMacroCards(
-      double pEaten, double pGoal,
-      double cEaten, double cGoal,
-      double fEaten, double fGoal) {
-    return Row(
-      children: [
-        Expanded(
-          child: _MacroCard(
-            label: 'Protein',
-            eaten: pEaten,
-            goal: pGoal,
-            unit: 'g',
-            color: const Color(0xFF4FA3E0),
-            icon: Icons.fitness_center_rounded,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MacroCard(
-            label: 'Carbs',
-            eaten: cEaten,
-            goal: cGoal,
-            unit: 'g',
-            color: const Color(0xFFFF9057),
-            icon: Icons.grain_rounded,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MacroCard(
-            label: 'Fat',
-            eaten: fEaten,
-            goal: fGoal,
-            unit: 'g',
-            color: const Color(0xFFFF6B8A),
-            icon: Icons.water_drop_rounded,
-          ),
-        ),
-      ],
-    );
-  }
+    return SizedBox(
+      height: 75,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: dates.length,
+        controller: ScrollController(initialScrollOffset: 30 * 64.0), // Start near the end (today)
+        itemBuilder: (context, index) {
+          final date = dates[index];
+          final sel = history.selectedDate;
+          final isSelected = date.year == sel.year && date.month == sel.month && date.day == sel.day;
+          final daysShort = ['M','T','W','T','F','S','S'];
 
-  Widget _buildDistributionBar(double protein, double carbs, double fat) {
-    final total = (protein + carbs + fat).clamp(1.0, double.infinity);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Macro Distribution (Today)',
-              style: GoogleFonts.outfit(
-                  fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              height: 18,
-              child: Row(
+          return GestureDetector(
+            onTap: () => history.setSelectedDate(date),
+            child: Container(
+              width: 54,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? accent : surf,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: isSelected ? accent : border),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Flexible(
-                    flex: (protein / total * 100).round().clamp(0, 100),
-                    child: Container(color: const Color(0xFF4FA3E0)),
+                  Text(
+                    daysShort[date.weekday - 1],
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.white : textMuted,
+                    ),
                   ),
-                  Flexible(
-                    flex: (carbs / total * 100).round().clamp(0, 100),
-                    child: Container(color: const Color(0xFFFF9057)),
-                  ),
-                  Flexible(
-                    flex: (fat / total * 100).round().clamp(0, 100),
-                    child: Container(color: const Color(0xFFFF6B8A)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : textPrimary,
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _barLegend('Protein', (protein / total * 100).round(), const Color(0xFF4FA3E0)),
-              _barLegend('Carbs', (carbs / total * 100).round(), const Color(0xFFFF9057)),
-              _barLegend('Fat', (fat / total * 100).round(), const Color(0xFFFF6B8A)),
-            ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _barLegend(String label, int pct, Color color) {
-    return Row(
-      children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text('$label $pct%', style: TextStyle(color: Colors.white60, fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildSmartTip(double calEaten, double calGoal, double protEaten, double protGoal) {
-    String emoji = '💡';
-    String message;
-    Color borderColor = AppTheme.primaryColor.withOpacity(0.3);
-
-    if (calEaten == 0) {
-      message = 'You haven\'t logged any meals today. Start by scanning a food barcode or searching manually!';
-    } else if (calEaten > calGoal * 1.1) {
-      emoji = '⚠️';
-      message = 'You\'ve exceeded your calorie goal today. Consider lighter snacks or a walk to balance it out.';
-      borderColor = Colors.redAccent.withOpacity(0.4);
-    } else if (protEaten < protGoal * 0.5 && calEaten > calGoal * 0.6) {
-      emoji = '🥩';
-      message = 'Protein intake is low relative to your calories. Add a high-protein meal like eggs, paneer, or chicken.';
-      borderColor = Colors.orangeAccent.withOpacity(0.4);
-    } else if (calEaten < calGoal * 0.4) {
-      emoji = '🍱';
-      message = 'You\'re well under your calorie goal. Make sure you\'re eating enough to fuel your body!';
-    } else {
-      emoji = '✅';
-      message = 'You\'re on track today! Keep logging your meals to stay consistent.';
-      borderColor = Colors.greenAccent.withOpacity(0.3);
-    }
+  Widget _buildCalorieCard(double eaten, double goal, Color accent, Color surf,
+      Color border, Color textPrimary, Color textMuted, Color shadowColor) {
+    final progress   = (eaten / goal).clamp(0.0, 1.0).toDouble();
+    final remaining  = (goal - eaten).clamp(0.0, goal).toDouble();
+    final isOver     = eaten > goal;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: surf,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Smart Tip',
-                    style: GoogleFonts.outfit(
-                        fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70)),
-                const SizedBox(height: 4),
-                Text(message,
-                    style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.5)),
-              ],
-            ),
-          ),
+        border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTodayMeals(List<HistoryEntry> entries) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Today\'s Meals',
-          style: GoogleFonts.outfit(
-              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        const SizedBox(height: 12),
-        if (entries.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Column(
-              children: [
-                Text('🍽️', style: TextStyle(fontSize: 40)),
-                SizedBox(height: 12),
-                Text('No meals logged yet today',
-                    style: TextStyle(color: Colors.white54, fontSize: 14)),
-              ],
-            ),
-          )
-        else
-          ...entries.map((e) => _MealTile(entry: e)),
-      ],
-    );
-  }
-}
-
-class _MacroCard extends StatelessWidget {
-  final String label;
-  final double eaten;
-  final double goal;
-  final String unit;
-  final Color color;
-  final IconData icon;
-
-  const _MacroCard({
-    required this.label,
-    required this.eaten,
-    required this.goal,
-    required this.unit,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = (eaten / goal).clamp(0.0, 1.0);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 10),
-          Text(
-            '${eaten.toInt()}$unit',
-            style: GoogleFonts.outfit(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          Text('DAILY CALORIES', style: TextStyle(fontSize: 11, letterSpacing: 1, color: textMuted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              // Animated Ring
+              SizedBox(
+                width: 100, height: 100,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: progress),
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, animValue, _) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        PieChart(
+                          PieChartData(
+                            startDegreeOffset: -90,
+                            sectionsSpace: 0,
+                            centerSpaceRadius: 38,
+                            sections: [
+                              PieChartSectionData(
+                                value: animValue,
+                                color: isOver ? AppTheme.accentRed : const Color(0xFF10B981), // Green for good, Red for over
+                                radius: 12,
+                                title: '',
+                              ),
+                              PieChartSectionData(
+                                value: 1.0 - animValue,
+                                color: accent.withOpacity(0.1),
+                                radius: 10,
+                                title: '',
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '${(animValue * 100).toInt()}%',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isOver ? AppTheme.accentRed : textPrimary),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation), child: child),
+                      ),
+                      child: Text(
+                        '${eaten.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
+                        key: ValueKey<int>(eaten.toInt()),
+                        style: TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: textPrimary, height: 1.1),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                      child: Text(
+                        'of ${goal.toInt()} kcal · ${isOver ? "EXCEEDED!" : "${remaining.toInt()} left"}',
+                        key: ValueKey<String>('${goal.toInt()}_$remaining'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isOver ? AppTheme.accentRed : textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Text(
-            '/ ${goal.toInt()}$unit',
-            style: TextStyle(color: Colors.white38, fontSize: 11),
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.white10,
-              color: color,
-              minHeight: 5,
+          const SizedBox(height: 16),
+          // AI Insight
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome, color: accent, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                    child: Text(
+                      isOver 
+                        ? 'You have exceeded your calorie goal for today by ${(eaten - goal).toInt()} kcal.'
+                        : remaining > goal * 0.5 
+                          ? 'Plenty of calories left! Plan a nutritious meal.'
+                          : remaining > goal * 0.1
+                            ? 'You are on track! Keep it up.'
+                            : 'Almost at your limit. Choose your next snack wisely!',
+                      key: ValueKey<String>('${isOver}_${remaining > goal * 0.5}_${remaining > goal * 0.1}'),
+                      style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaterCard(UserProvider user, Color accent, Color surf, Color border, Color textPrimary, Color textMuted, Color shadowColor) {
+    final int eaten = user.currentWater;
+    final int goal = user.waterGoal;
+    final double progress = (eaten / goal.clamp(1, 99999)).clamp(0.0, 1.0).toDouble();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: surf,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('WATER INTAKE', style: TextStyle(fontSize: 11, letterSpacing: 1, color: textMuted, fontWeight: FontWeight.w600)),
+              GestureDetector(
+                onTap: () => user.resetWater(),
+                child: Text('Reset', style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.water_drop_rounded, color: Color(0xFF4FA3E0), size: 36),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          transitionBuilder: (child, animation) => FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation), child: child),
+                          ),
+                          child: Text(
+                            '$eaten ml',
+                            key: ValueKey<int>(eaten),
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textPrimary),
+                          ),
+                        ),
+                        Text('Goal: $goal ml', style: TextStyle(fontSize: 13, color: textMuted, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: progress),
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, _) => ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: value,
+                          backgroundColor: const Color(0xFF4FA3E0).withOpacity(0.12),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4FA3E0)),
+                          minHeight: 8,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => user.addWater(250),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4FA3E0).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF4FA3E0).withOpacity(0.3)),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text('+250 ml', style: TextStyle(color: Color(0xFF4FA3E0), fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onTap: () => user.addWater(500),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4FA3E0).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF4FA3E0).withOpacity(0.3)),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text('+500 ml', style: TextStyle(color: Color(0xFF4FA3E0), fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-}
 
-class _MealTile extends StatelessWidget {
-  final HistoryEntry entry;
-  const _MealTile({required this.entry});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMacrosCard(
+      double pEaten, double pGoal,
+      double cEaten, double cGoal,
+      double fEaten, double fGoal,
+      Color accent, Color surf, Color border, Color textPrimary, Color textMuted, Color shadowColor) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: surf,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(color: shadowColor, blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(entry.emoji, style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 14),
-          Expanded(
+          Text('MACROS TODAY', style: TextStyle(fontSize: 11, letterSpacing: 1, color: textMuted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          _macroBar('Protein', pEaten, pGoal, const Color(0xFFFF6B6B), textPrimary, textMuted),
+          const SizedBox(height: 14),
+          _macroBar('Carbs',   cEaten, cGoal, const Color(0xFF4FA3E0), textPrimary, textMuted),
+          const SizedBox(height: 14),
+          _macroBar('Fat',     fEaten, fGoal, const Color(0xFFFFB74D), textPrimary, textMuted),
+        ],
+      ),
+    );
+  }
+
+  Widget _macroBar(String label, double eaten, double goal, Color color,
+      Color textPrimary, Color textMuted) {
+    final progress = (eaten / goal.clamp(1.0, 999.0).toDouble()).clamp(0.0, 1.0).toDouble();
+    final isOver = eaten > goal;
+    final displayColor = isOver ? AppTheme.accentRed : color;
+    return Row(
+      children: [
+        SizedBox(
+          width: 56,
+          child: Text(label, style: TextStyle(color: textMuted, fontSize: 13)),
+        ),
+        Expanded(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: progress),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) => ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: value,
+                backgroundColor: displayColor.withOpacity(0.12),
+                valueColor: AlwaysStoppedAnimation<Color>(displayColor),
+                minHeight: 8,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 70,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+            child: Text(
+              '${eaten.toInt()}g / ${goal.toInt()}g',
+              key: ValueKey<int>(eaten.toInt()),
+              textAlign: TextAlign.end,
+              style: TextStyle(color: displayColor, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMealTimeline(BuildContext context, List<HistoryEntry> entries, Color accent, Color surf,
+      Color surf2, Color border, Color textPrimary, Color textMuted) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('MEAL TIMELINE', style: TextStyle(fontSize: 11, letterSpacing: 1, color: textMuted, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        if (entries.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(color: surf, borderRadius: BorderRadius.circular(20), border: Border.all(color: border)),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  entry.foodName,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'P ${entry.protein.toStringAsFixed(1)}g  •  C ${entry.carbs.toStringAsFixed(1)}g  •  F ${entry.fat.toStringAsFixed(1)}g',
-                  style: TextStyle(color: Colors.white38, fontSize: 11),
+                Text('🍽️', style: const TextStyle(fontSize: 40)),
+                const SizedBox(height: 12),
+                Text('No meals logged yet', style: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('Start by scanning your first meal', style: TextStyle(color: textMuted, fontSize: 14)),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MultiCaptureScreen())),
+                  icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+                  label: const Text('Log a Meal'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${entry.calories.toInt()}',
-                style: TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16),
+          )
+        else
+          ...entries.map((e) {
+            final t = '${e.dateTime.hour.toString().padLeft(2,'0')}:${e.dateTime.minute.toString().padLeft(2,'0')}';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Time + dot
+                  Column(
+                    children: [
+                      SizedBox(width: 42, child: Text(t, style: TextStyle(color: textMuted, fontSize: 12))),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  Container(width: 10, height: 10, margin: const EdgeInsets.only(top: 3), decoration: BoxDecoration(color: accent, shape: BoxShape.circle)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(color: surf, borderRadius: BorderRadius.circular(14), border: Border.all(color: border)),
+                      child: Row(
+                        children: [
+                          Text(e.emoji, style: const TextStyle(fontSize: 22)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(e.foodName, style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600, fontSize: 14), overflow: TextOverflow.ellipsis),
+                                Text('${e.calories.toInt()} kcal', style: TextStyle(color: textMuted, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          Text('${e.calories.toInt()}', style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text('kcal', style: TextStyle(color: Colors.white38, fontSize: 10)),
-            ],
-          ),
-        ],
-      ),
+            );
+          }),
+      ],
     );
   }
 }

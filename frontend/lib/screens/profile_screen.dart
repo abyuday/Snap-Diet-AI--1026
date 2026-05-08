@@ -4,146 +4,138 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/user_provider.dart';
 import '../services/history_provider.dart';
-import '../services/auth_service.dart';
+import '../services/theme_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-    final historyProvider = Provider.of<HistoryProvider>(context);
-    
+    final isDark   = context.watch<ThemeProvider>().isDark;
+    final user     = context.watch<UserProvider>();
+    final history  = context.watch<HistoryProvider>();
+    final accent   = isDark ? AppTheme.primaryColor : AppTheme.primaryDark;
+    final bg       = isDark ? AppTheme.darkBg       : AppTheme.lightBg;
+    final surf     = isDark ? AppTheme.darkSurface   : AppTheme.lightSurface;
+    final surf2    = isDark ? AppTheme.darkSurface2  : AppTheme.lightSurface2;
+    final border   = isDark ? AppTheme.darkBorder    : AppTheme.lightBorder;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textMuted   = isDark ? AppTheme.darkTextMuted   : AppTheme.lightTextMuted;
+
+    final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U';
+    final goalLabel = user.goal == 'weight_loss' ? 'Weight Loss'
+        : user.goal == 'muscle_gain' ? 'Muscle Gain' : 'Maintenance';
+    final actLabel = user.activityLevel == 'low' ? 'Low Activity'
+        : user.activityLevel == 'high' ? 'High Activity' : 'Active';
+
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: bg,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
-              Text('My Profile', style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 24),
-              // Profile card
+              // ── Avatar ────────────────────────────────────────────────
               Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Center(
-                        child: Text('👤', style: TextStyle(fontSize: 30)),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(userProvider.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                        const SizedBox(height: 4),
-                        Text(userProvider.rank, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
-                      ],
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => _showEditProfileDialog(context, userProvider),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text('Edit', style: TextStyle(color: AppTheme.primaryColor, fontSize: 13, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
+                width: 80, height: 80,
+                decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                child: Center(
+                  child: Text(initial, style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
-              const SizedBox(height: 24),
-              // Stats row
+              const SizedBox(height: 14),
+              Text(user.name, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: textPrimary)),
+              const SizedBox(height: 4),
+              Text('$goalLabel · $actLabel', style: GoogleFonts.outfit(fontSize: 13, color: textMuted)),
+              const SizedBox(height: 14),
+
+              // Badges
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(child: _StatBox(emoji: '🍽', value: '${historyProvider.history.length}', label: 'Meals Logged')),
-                  const SizedBox(width: 12),
-                  Expanded(child: _StatBox(emoji: '🔥', value: '${historyProvider.totalToday.toInt()}', label: 'kcal Today')),
-                  const SizedBox(width: 12),
-                  Expanded(child: _StatBox(emoji: '📅', value: '7', label: 'Day Streak')),
+                  _badge('🔥 ${history.currentStreak}-day streak', accent),
+                  const SizedBox(width: 10),
+                  _badge('📸 ${history.history.length} scans', accent),
                 ],
               ),
               const SizedBox(height: 28),
-              Text('Daily Progress', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 14),
-              _GoalTile(
-                label: 'Calories', 
-                current: historyProvider.totalToday.toInt(), 
-                goal: userProvider.calorieGoal, 
-                color: AppTheme.primaryColor,
-                unit: 'kcal',
+
+              // ── Personal Info ─────────────────────────────────────────
+              _sectionCard(
+                title: 'PERSONAL INFO',
+                surf: surf, border: border, textPrimary: textPrimary, textMuted: textMuted,
+                children: [
+                  _infoRow('Age',            user.age > 0 ? '${user.age} years' : '—',         textPrimary, textMuted),
+                  _divider(border),
+                  _infoRow('Height',         user.heightCm > 0 ? '${user.heightCm.toInt()} cm' : '—', textPrimary, textMuted),
+                  _divider(border),
+                  _infoRow('Current Weight', user.weightKg > 0 ? '${user.weightKg.toStringAsFixed(1)} kg' : '—', textPrimary, textMuted),
+                  _divider(border),
+                  _infoRow('Target Weight',  user.targetWeightKg > 0 ? '${user.targetWeightKg.toStringAsFixed(1)} kg' : '—', accent, textMuted),
+                ],
               ),
-              const SizedBox(height: 10),
-              _GoalTile(
-                label: 'Protein', 
-                current: historyProvider.totalProteinToday.toInt(), 
-                goal: userProvider.proteinGoal, 
-                color: const Color(0xFF4FA3E0),
-                unit: 'g',
+              const SizedBox(height: 16),
+
+              // ── Daily Goals ───────────────────────────────────────────
+              _sectionCard(
+                title: 'DAILY GOALS',
+                surf: surf, border: border, textPrimary: textPrimary, textMuted: textMuted,
+                children: [
+                  _goalRow('Calorie Goal', history.totalToday.toInt(), user.calorieGoal, '${user.calorieGoal} kcal', const Color(0xFF4FA3E0), textPrimary, textMuted),
+                  const SizedBox(height: 16),
+                  _goalRow('Protein Goal', history.totalProteinToday.toInt(), user.proteinGoal, '${user.proteinGoal}g', const Color(0xFFFF6B6B), textPrimary, textMuted),
+                  const SizedBox(height: 16),
+                  _goalRow('Water Goal', user.currentWater, user.waterGoal, '${(user.waterGoal / 1000).toStringAsFixed(1)} L', const Color(0xFF4FA3E0), textPrimary, textMuted),
+                ],
               ),
-              const SizedBox(height: 10),
-              _GoalTile(
-                label: 'Carbs', 
-                current: historyProvider.totalCarbsToday.toInt(), 
-                goal: userProvider.carbsGoal, 
-                color: const Color(0xFFFF9057),
-                unit: 'g',
-              ),
-              const SizedBox(height: 10),
-              _GoalTile(
-                label: 'Hydration', 
-                current: userProvider.currentWater, 
-                goal: userProvider.waterGoal, 
-                color: const Color(0xFF64B5F6),
-                unit: 'ml',
-                onTap: () => userProvider.addWater(250),
-              ),
-              const SizedBox(height: 28),
-              Text('Settings', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 14),
-              _SettingsTile(icon: Icons.info_outline_rounded, label: 'About', trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white24)),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => _showGoalSettings(context, userProvider),
-                child: _SettingsTile(
-                  icon: Icons.track_changes_rounded, 
-                  label: 'Adjust Daily Goals', 
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+              const SizedBox(height: 16),
+
+              // ── Edit Profile button ───────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () => _showEditDialog(context, user, accent, surf, border, textPrimary, textMuted),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: border),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: textPrimary)),
                 ),
               ),
               const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => context.read<UserProvider>().logout(),
-                child: _SettingsTile(
-                  icon: Icons.logout_rounded, 
-                  label: 'Logout', 
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white24),
-                  isDestructive: true,
+
+              // ── Theme toggle ─────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.read<ThemeProvider>().toggle(),
+                  icon: Icon(isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round, size: 18, color: accent),
+                  label: Text(isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: accent)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: accent.withOpacity(0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 12),
+
+              // ── Logout ────────────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: () => _confirmLogout(context, user),
+                  icon: const Icon(Icons.logout_rounded, size: 18, color: AppTheme.accentRed),
+                  label: Text('Sign Out', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.accentRed)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppTheme.accentRed.withOpacity(0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -151,251 +143,167 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showEditProfileDialog(BuildContext context, UserProvider userProvider) {
-    final nameController = TextEditingController(text: userProvider.name);
-    final rankController = TextEditingController(text: userProvider.rank);
+  Widget _badge(String label, Color accent) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withOpacity(0.25)),
+      ),
+      child: Text(label, style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600)),
+    );
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Edit Profile', style: GoogleFonts.outfit(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryColor)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: rankController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Rank',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryColor)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                userProvider.updateProfile(nameController.text.trim(), rankController.text.trim());
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
+  Widget _sectionCard({
+    required String title,
+    required Color surf, required Color border,
+    required Color textPrimary, required Color textMuted,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: surf,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontSize: 11, letterSpacing: 1, color: textMuted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          ...children,
         ],
       ),
     );
   }
 
-  void _showGoalSettings(BuildContext context, UserProvider user) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surfaceColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Daily Goal Settings', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 24),
-            _buildSlider('Calories', user.calorieGoal.toDouble(), 1200, 3500, (v) => user.updateGoals(calories: v.toInt())),
-            const SizedBox(height: 16),
-            _buildSlider('Protein (g)', user.proteinGoal.toDouble(), 40, 250, (v) => user.updateGoals(protein: v.toInt())),
-            const SizedBox(height: 16),
-            _buildSlider('Water (ml)', user.waterGoal.toDouble(), 1000, 5000, (v) => user.updateGoals(water: v.toInt())),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text('Save Goals', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
+  Widget _infoRow(String label, String value, Color valueColor, Color textMuted) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: textMuted, fontSize: 14)),
+          Text(value, style: TextStyle(color: valueColor, fontSize: 14, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
 
-  Widget _buildSlider(String label, double val, double min, double max, Function(double) onChanged) {
+  Widget _divider(Color border) => Divider(color: border, height: 1);
+
+  Widget _goalRow(String label, int current, int goal, String goalLabel,
+      Color color, Color textPrimary, Color textMuted) {
+    final progress = (current / goal.clamp(1, 999999).toDouble()).clamp(0.0, 1.0).toDouble();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white70)),
-            Text('${val.toInt()}', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+            Text(label, style: TextStyle(color: textMuted, fontSize: 13)),
+            Text(goalLabel, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
           ],
         ),
-        Slider(
-          value: val,
-          min: min,
-          max: max,
-          activeColor: AppTheme.primaryColor,
-          inactiveColor: Colors.white10,
-          onChanged: onChanged,
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: color.withOpacity(0.12),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 8,
+          ),
         ),
       ],
     );
   }
-}
 
-class _SettingsTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Widget trailing;
-  final bool isDestructive;
-  const _SettingsTile({required this.icon, required this.label, required this.trailing, this.isDestructive = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: isDestructive ? Colors.redAccent : Colors.white54, size: 20),
-          const SizedBox(width: 14),
-          Expanded(child: Text(label, style: TextStyle(color: isDestructive ? Colors.redAccent : Colors.white, fontSize: 15))),
-          trailing,
+  void _confirmLogout(BuildContext context, UserProvider user) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Sign Out?'),
+        content: const Text('You will be returned to the login screen.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () { Navigator.pop(context); user.logout(); },
+            child: const Text('Sign Out', style: TextStyle(color: AppTheme.accentRed)),
+          ),
         ],
       ),
     );
   }
-}
 
-class _StatBox extends StatelessWidget {
-  final String emoji, value, label;
-  const _StatBox({required this.emoji, required this.value, required this.label});
+  void _showEditDialog(BuildContext context, UserProvider user, Color accent,
+      Color surf, Color border, Color textPrimary, Color textMuted) {
+    final nameCtrl = TextEditingController(text: user.name);
+    final calCtrl = TextEditingController(text: user.calorieGoal.toString());
+    final protCtrl = TextEditingController(text: user.proteinGoal.toString());
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      child: Column(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-          const SizedBox(height: 2),
-          Text(label, textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 10)),
-        ],
-      ),
-    );
-  }
-}
-
-class _GoalTile extends StatelessWidget {
-  final String label, unit;
-  final int current, goal;
-  final Color color;
-  final VoidCallback? onTap;
-  
-  const _GoalTile({
-    required this.label, 
-    required this.current, 
-    required this.goal, 
-    required this.color, 
-    required this.unit,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final fraction = (current / goal).clamp(0.0, 1.0);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: surf,
+        title: Text('Edit Profile', style: TextStyle(color: textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(label, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-                Text('$current / $goal $unit', style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
-              ],
+            TextField(
+              controller: nameCtrl,
+              style: TextStyle(color: textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Display Name',
+                labelStyle: TextStyle(color: textMuted),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: border)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+              ),
             ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: fraction,
-                minHeight: 8,
-                backgroundColor: Colors.white.withOpacity(0.07),
-                valueColor: AlwaysStoppedAnimation<Color>(color),
+            const SizedBox(height: 16),
+            TextField(
+              controller: calCtrl,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Calorie Goal (kcal)',
+                labelStyle: TextStyle(color: textMuted),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: border)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: protCtrl,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Protein Goal (g)',
+                labelStyle: TextStyle(color: textMuted),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: border)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
               ),
             ),
           ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              user.updateProfile(nameCtrl.text, user.rank);
+              user.updateGoals(
+                calories: int.tryParse(calCtrl.text) ?? user.calorieGoal,
+                protein: int.tryParse(protCtrl.text) ?? user.proteinGoal,
+              );
+              Navigator.pop(context);
+            },
+            child: Text('Save', style: TextStyle(color: accent, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-
-class _Switch extends StatefulWidget {
-  const _Switch();
-
-  @override
-  State<_Switch> createState() => _SwitchState();
-}
-
-class _SwitchState extends State<_Switch> {
-  bool _val = true;
-
-  @override
-  Widget build(BuildContext context) {
-    return Switch(
-      value: _val,
-      onChanged: (v) => setState(() => _val = v),
-      activeColor: AppTheme.primaryColor,
     );
   }
 }

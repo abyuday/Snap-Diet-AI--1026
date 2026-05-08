@@ -195,7 +195,10 @@ class _VoiceLogScreenState extends State<VoiceLogScreen>
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
@@ -221,6 +224,8 @@ class _VoiceLogScreenState extends State<VoiceLogScreen>
             _buildBottomBar(),
           ],
         ),
+      ),
+      ),
       ),
     );
   }

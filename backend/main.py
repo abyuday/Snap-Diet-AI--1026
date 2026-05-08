@@ -171,6 +171,11 @@ class UserSignup(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    rank: Optional[str] = None
+    goals: Optional[dict] = None
     
 class TokenResponse(BaseModel):
     access_token: str
@@ -209,9 +214,26 @@ async def login(creds: UserLogin):
     token = create_access_token(data={"sub": user["email"]})
     return {"access_token": token, "user": user_helper(user)}
 
-@app.get("/api/auth/me")
-async def get_me(current_user: dict = Depends(get_current_user)):
-    return current_user
+@app.patch("/api/auth/update")
+async def update_user(update: UserUpdate, current_user: dict = Depends(get_current_user)):
+    update_data = {k: v for k, v in update.dict().items() if v is not None}
+    
+    if not update_data:
+        return current_user
+
+    # Deep merge goals if provided
+    if "goals" in update_data and "goals" in current_user:
+        merged_goals = current_user["goals"].copy()
+        merged_goals.update(update_data["goals"])
+        update_data["goals"] = merged_goals
+
+    await user_collection.update_one(
+        {"email": current_user["email"]},
+        {"$set": update_data}
+    )
+    
+    updated_user = await user_collection.find_one({"email": current_user["email"]})
+    return user_helper(updated_user)
 
 @app.get("/")
 def read_root():

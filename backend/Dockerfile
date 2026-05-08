@@ -17,17 +17,21 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Install torch CPU-only first (avoids downloading ~1.5 GB of CUDA libs unnecessarily)
+RUN pip install --no-cache-dir --timeout=300 --retries=10 \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining requirements (excluding torch/torchvision already installed above)
+RUN grep -vE '^(torch|torchvision)' requirements.txt > /tmp/requirements_no_torch.txt \
+    && pip install --no-cache-dir --timeout=300 --retries=10 -r /tmp/requirements_no_torch.txt
+
 # Install missing database and auth dependencies
-RUN pip install motor "passlib[bcrypt]" "python-jose[cryptography]" email-validator
+RUN pip install --no-cache-dir --timeout=300 --retries=10 \
+    motor "passlib[bcrypt]" "python-jose[cryptography]" email-validator
 
 # Copy backend code
 COPY . .
-
-# Copy datasets from parent context if needed (handled in docker-compose context or via relative path)
-# Assuming datasets/ and FNDDS/ are handled by mounting or being in context
-# In this standalone Dockerfile, expecting them to be copied if in same dir
-# But composition usually handles this. Let's copy them if we add them to the build context.
 
 # Expose FastAPI port
 EXPOSE 8000

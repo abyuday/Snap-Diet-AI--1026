@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../theme/app_theme.dart';
+import '../services/theme_provider.dart';
 import '../services/api_service.dart';
 import '../services/user_provider.dart';
 import '../services/history_provider.dart';
@@ -199,26 +200,35 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.watch<ThemeProvider>().isDark;
+    final bg     = isDark ? AppTheme.darkBg      : AppTheme.lightBg;
+    final surf   = isDark ? AppTheme.darkSurface  : AppTheme.lightSurface;
+    final surf2  = isDark ? AppTheme.darkSurface2 : AppTheme.lightSurface2;
+    final border = isDark ? AppTheme.darkBorder   : AppTheme.lightBorder;
+    final accent = isDark ? AppTheme.primaryColor : AppTheme.primaryDark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textMuted   = isDark ? AppTheme.darkTextMuted   : AppTheme.lightTextMuted;
+
     try {
       return Material(
-        color: AppTheme.backgroundColor,
+        color: bg,
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(surf, border, textPrimary, textMuted),
               Expanded(
                 child: _messages.isEmpty 
-                  ? Center(child: Text("Initializing chat...", style: TextStyle(color: Colors.white24)))
+                  ? Center(child: Text("Initializing chat...", style: TextStyle(color: textMuted)))
                   : ListView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.all(20),
                       itemCount: _messages.length,
-                      itemBuilder: (ctx, i) => _buildMessage(_messages[i], ctx),
+                      itemBuilder: (ctx, i) => _buildMessage(_messages[i], ctx, surf, border, accent, textPrimary, textMuted),
                     ),
               ),
               if (_isLoading)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 10),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -227,15 +237,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: AppTheme.primaryColor,
+                          color: accent,
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Text('AI is thinking...', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Text('AI is thinking...', style: TextStyle(color: textMuted, fontSize: 12)),
                     ],
                   ),
                 ),
-              _buildInputArea(),
+              _buildInputArea(surf, surf2, border, accent, textPrimary, textMuted),
             ],
           ),
         ),
@@ -243,7 +253,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } catch (e, stack) {
       debugPrint("ERROR rendering ChatScreen: $e\n$stack");
       return Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: bg,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -258,12 +268,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Color surf, Color border, Color textPrimary, Color textMuted) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05))),
+        color: surf,
+        border: Border(bottom: BorderSide(color: border)),
       ),
       child: Row(
         children: [
@@ -282,9 +292,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('SnapDiet AI',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text('SnapDiet AI',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary)),
               Row(
                 children: [
                   Container(
@@ -297,7 +307,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(width: 5),
                   Text('Online',
-                      style: TextStyle(fontSize: 12, color: Colors.white54)),
+                      style: TextStyle(fontSize: 12, color: textMuted)),
                 ],
               ),
             ],
@@ -305,7 +315,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           const Spacer(),
           // Recipe quick action
           IconButton(
-            icon: const Icon(Icons.restaurant_menu_rounded, color: Colors.white38, size: 22),
+            icon: Icon(Icons.restaurant_menu_rounded, color: textMuted, size: 22),
             tooltip: 'Ask for a recipe',
             onPressed: () {
               _controller.text = 'Give me a healthy recipe with chicken and vegetables';
@@ -319,7 +329,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMessage(_ChatMessage msg, BuildContext context) {
+  Widget _buildMessage(_ChatMessage msg, BuildContext context, Color surf, Color border, Color accent, Color textPrimary, Color textMuted) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -331,8 +341,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               color: msg.isAi
-                  ? AppTheme.surfaceColor
-                  : AppTheme.primaryColor.withOpacity(0.2),
+                  ? surf
+                  : accent.withOpacity(0.2),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(20),
                 topRight: const Radius.circular(20),
@@ -341,14 +351,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
               border: Border.all(
                 color: msg.isAi
-                    ? Colors.white.withOpacity(0.06)
-                    : AppTheme.primaryColor.withOpacity(0.4),
+                    ? border
+                    : accent.withOpacity(0.4),
               ),
             ),
             child: Text(
               msg.text,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: textPrimary,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -427,14 +437,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(rec['name'] ?? '',
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: textPrimary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12),
                                   overflow: TextOverflow.ellipsis),
                               const SizedBox(height: 3),
                               Text(rec['reason'] ?? '',
-                                  style: const TextStyle(color: Colors.white54, fontSize: 10),
+                                  style: TextStyle(color: textMuted, fontSize: 10),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis),
                             ],
@@ -487,16 +497,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildInputArea() {
+  Widget _buildInputArea(Color surf, Color surf2, Color border, Color accent, Color textPrimary, Color textMuted) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+        color: surf,
+        border: Border(top: BorderSide(color: border)),
       ),
       child: Row(
         children: [
-          // Mic Button — static, no AnimatedBuilder to avoid HTML renderer crash
+          // Mic Button
           GestureDetector(
             onTap: _speechAvailable
                 ? (_isListening ? _stopListening : _startListening)
@@ -507,36 +517,36 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _isListening
-                    ? const Color(0x26FF5252)
-                    : const Color(0x10FFFFFF),
+                    ? AppTheme.accentRed.withOpacity(0.15)
+                    : surf2,
                 border: Border.all(
                   color: _isListening
-                      ? const Color(0x99FF5252)
-                      : Colors.white12,
+                      ? AppTheme.accentRed.withOpacity(0.6)
+                      : border,
                 ),
               ),
               child: Icon(
                 _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                color: _isListening ? Colors.redAccent : Colors.white38,
+                color: _isListening ? AppTheme.accentRed : textMuted,
                 size: 20,
               ),
             ),
           ),
           const SizedBox(width: 10),
 
-          // Text Field — FocusNode only on TextField, not duplicated on Focus widget
+          // Text Field
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               decoration: BoxDecoration(
-                color: AppTheme.backgroundColor,
+                color: surf2,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white12),
+                border: Border.all(color: border),
               ),
               child: TextField(
                 controller: _controller,
                 focusNode: _inputFocusNode,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: textPrimary, fontSize: 14),
                 minLines: 1,
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
@@ -545,11 +555,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   hintText: _isListening
                       ? 'Listening…'
                       : 'Ask about nutrition, recipes…',
-                  hintStyle: const TextStyle(
-                    color: Colors.white24,
+                  hintStyle: TextStyle(
+                    color: textMuted,
                     fontSize: 13,
                   ),
                   border: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -557,14 +571,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(width: 10),
 
-          // Send Button — solid color, no BoxShadow or LinearGradient
+          // Send Button
           GestureDetector(
             onTap: _handleSend,
             child: Container(
               width: 46,
               height: 46,
-              decoration: const BoxDecoration(
-                color: AppTheme.primaryColor,
+              decoration: BoxDecoration(
+                color: accent,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),

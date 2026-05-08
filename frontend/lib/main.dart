@@ -3,14 +3,16 @@ import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/main_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/api_service.dart';
 import 'services/history_provider.dart';
 import 'services/user_provider.dart';
+import 'services/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Custom ErrorWidget to debug layout crashes
+
+  // Clean error widget for production
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
       child: SingleChildScrollView(
@@ -37,11 +39,11 @@ class DietitianAppLoader extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider(create: (_) => ApiService()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()..tryAutoLogin()),
         ChangeNotifierProxyProvider<UserProvider, HistoryProvider>(
           create: (_) => HistoryProvider(),
           update: (_, userProvider, history) {
-            // Re-fetch or reset if auth state changes
             if (userProvider.isAuthenticated) {
               history?.setUserId('authenticated_user');
             } else {
@@ -61,10 +63,13 @@ class DietitianApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
     return MaterialApp(
-      title: 'SnapDiet AI',
+      title: 'Snap DietAI',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode,
       home: const AuthWrapper(),
     );
   }
@@ -77,10 +82,14 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
-        if (userProvider.isAuthenticated) {
-          return const MainShell();
+        if (!userProvider.isAuthenticated) {
+          return const LoginScreen();
         }
-        return const LoginScreen();
+        // New users who haven't completed onboarding
+        if (!userProvider.onboardingComplete) {
+          return const OnboardingScreen();
+        }
+        return const MainShell();
       },
     );
   }
