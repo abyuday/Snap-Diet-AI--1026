@@ -1,0 +1,41 @@
+food_name,density_g_cm3
+Idli,0.45
+Dosa,0.55
+Masala Dosa,0.55
+Roti,0.65
+Chapati,0.65
+Naan,0.50
+Paratha,0.68
+Samosa,0.50
+Puri,0.60
+Vada,0.40
+Rice,0.70
+White Rice,0.70
+Biryani,0.75
+Chicken Biryani,0.75
+Veg Biryani,0.74
+Dal,1.05
+Sambar,1.02
+Rasam,1.01
+Chicken Curry,1.05
+Paneer Butter Masala,1.06
+Chole,1.04
+Rajma,1.04
+Aloo Gobi,0.85
+Palak Paneer,1.05
+Chicken Tikka,0.95
+Paneer Tikka,0.95
+Gulab Jamun,1.10
+Rasgulla,0.80
+Jalebi,0.60
+Ladoo,0.70
+Milk,1.03
+Apple,0.80
+Banana,0.95
+Pizza,0.80
+Beef Steak,1.00
+Chicken breast,1.05
+Eggs,1.05
+Spaghetti,0.60
+Tea,1.00
+Coffee,1.00

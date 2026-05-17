@@ -1,0 +1,185 @@
+food_name,calories,protein,carbs,fat,description,emoji,fiber_g,sugar_g,sodium_mg,potassium_mg,vitamin_a_mcg,vitamin_c_mg,calcium_mg,iron_mg,standard_portion_grams,portion_unit
+Paneer Tikka,220,16.0,6.0,15.0,Grilled cottage cheese with spices and vegetables,🥘,3.3,1.6,755.3,294.1,192.5,6.8,384.6,0.6,120,6 pieces
+Chicken Biryani,190,8.5,22.0,6.5,Fragrant basmati rice cooked with chicken and aromatic spices,🍗,7.6,2.6,765.4,421.6,211.8,11.1,33.1,4.1,350,1 plate
+Masala Dosa,170,3.5,30.0,4.5,Crispy fermented rice pancake filled with potato masala,🍛,6.0,3.5,736.1,329.1,141.8,7.1,85.2,1.5,150,1 piece
+Dal Tadka,110,6.0,15.0,3.5,Yellow lentils tempered with cumin and garlic,🍲,5.0,1.8,327.6,372.8,192.0,3.5,73.2,5.8,200,1 bowl
+Butter Chicken,240,15.0,9.0,16.0,Succulent chicken pieces in a rich tomato and butter gravy,🥘,1.7,4.9,61.6,570.7,179.5,4.8,195.3,1.3,250,1 bowl
+Naan Bread,290,9.0,52.0,5.0,Soft leavened oven-baked flatbread,🫓,1.7,4.8,746.2,293.1,271.3,18.4,61.8,2.8,90,1 piece
+Palak Paneer,150,11.0,8.0,9.0,Cottage cheese pieces in a thick spicy spinach puree,🥗,0.9,1.3,371.1,580.6,23.2,8.3,166.6,1.0,220,1 bowl
+Chole Bhature,270,8.0,42.0,9.5,Spicy chickpea curry served with deep-fried leavened bread,🥘,7.0,2.5,775.0,552.7,91.5,14.6,48.7,6.0,350,1 plate
+Samosa,310,5.0,36.0,17.0,Deep-fried pastry with spiced potato and pea filling,🥟,5.0,1.5,772.7,197.9,285.6,20.1,90.2,3.3,80,1 piece
+Gulab Jamun,380,4.0,68.0,11.0,Deep-fried milk dumplings soaked in sugar syrup,🍡,5.8,1.4,689.8,134.7,268.2,27.6,51.4,3.8,40,1 piece
+Idli,145,4.5,31.0,0.5,Steamed savory rice cake,⚪,0.7,0.2,270.8,150.4,142.1,1.6,85.3,0.9,40,1 piece
+Alu Paratha,210,5.0,35.0,6.0,Flatbread stuffed with spiced mashed potatoes,🫓,7.8,3.0,338.8,109.1,189.8,32.0,55.1,4.6,120,1 piece
+Tandoori Chicken,160,24.0,1.0,7.0,Chicken marinated in yogurt and spices grilled in a clay oven,🍗,6.7,2.5,688.4,147.2,90.4,25.1,50.2,1.7,200,2 pieces
+Poha,180,3.5,36.0,3.0,Flattened rice cooked with onions and turmeric,🥣,2.1,0.3,287.7,441.5,64.6,3.3,57.0,5.4,180,1 bowl
+Rajma Chawal,140,5.0,25.0,2.5,Red kidney bean curry served with steamed rice,🍚,1.9,1.4,177.1,135.6,144.5,34.9,44.1,1.6,350,1 plate
+Vada Pav,280,6.0,44.0,10.0,Spicy potato fritter in a bread bun with chutneys,🍔,1.9,4.5,467.6,259.5,112.5,36.8,79.8,1.5,170,1 piece
+Aloo Gobi,110,3.0,14.0,5.0,Curry made with potatoes and cauliflower,🍲,2.8,1.2,752.1,522.4,179.3,2.4,60.2,0.7,200,1 bowl
+Mutton Rogan Josh,210,18.0,4.0,14.0,Kashmiri style slow-cooked lamb curry,🥘,4.4,0.7,572.0,111.6,32.5,11.1,38.6,3.1,250,1 bowl
+Hyderabadi Haleem,140,6.0,12.0,8.0,Slow-cooked stew of meat lentils and pounded wheat,🥣,3.7,2.4,477.5,507.2,292.6,32.2,92.0,3.6,300,1 bowl
+Pav Bhaji,160,4.0,22.0,6.5,Thick vegetable curry mash served with buttered bread rolls,🥘,2.7,4.9,122.9,240.9,296.0,29.9,50.7,0.9,350,1 plate
+Dhokla,165,7.0,30.0,3.5,Steamed fermented gram flour savory cake,🍰,5.1,1.2,511.3,159.1,212.5,7.4,63.5,4.8,50,1 piece
+Bhelpuri,180,4.0,35.0,3.0,Savory snack made of puffed rice and vegetables,🥗,1.5,3.4,792.5,448.4,165.5,8.4,92.5,3.0,120,1 bowl
+Chicken Tikka Masala,140,6.0,12.0,8.0,Roasted chicken chunks in a spicy creamy sauce,🥘,2.7,3.8,155.1,414.5,99.8,14.8,69.9,3.4,250,1 bowl
+Saag Paneer,140,6.0,12.0,8.0,Leafy greens cooked with paneer and spices,🥗,3.2,1.2,438.7,538.7,246.0,19.4,335.3,2.9,220,1 bowl
+Gajar Ka Halwa,350,4.0,65.0,10.0,Carrot based sweet dessert pudding,🥕,3.9,3.6,708.0,467.5,208.6,24.7,29.4,2.7,150,1 bowl
+Rasgulla,350,4.0,65.0,10.0,Syrupy dessert of chenna dumplings,🔘,6.4,1.8,605.6,501.7,57.2,14.8,95.2,3.6,50,1 piece
+Medue Vada,260,8.0,50.0,4.0,Fried savory lentil donut snack,🍩,2.0,3.2,572.8,241.0,274.2,18.5,70.2,1.4,50,1 piece
+Fish Curry (Goan),140,6.0,12.0,8.0,Spicy coconut based fish curry,🐟,4.4,3.2,576.9,188.7,248.5,29.9,46.8,1.5,250,1 bowl
+Baingan Bharta,140,6.0,12.0,8.0,Roasted eggplant mash with spices,🥘,4.9,2.7,319.6,475.3,285.4,1.5,31.1,5.2,200,1 bowl
+Okra Masala (Bhindi),140,6.0,12.0,8.0,Spiced stir-fried okra,🥗,0.8,0.5,270.2,503.4,220.5,10.1,83.5,5.7,150,1 bowl
+Upma,140,6.0,12.0,8.0,Thick porridge from dry-roasted semolina,🥣,5.1,4.2,657.0,595.3,187.9,28.5,69.6,2.6,200,1 bowl
+Jalebi,350,4.0,65.0,10.0,Deep-fried flour coils soaked in sugar syrup,🥨,1.8,1.6,657.6,306.3,131.3,35.8,62.7,2.0,30,1 piece
+Pani Puri,260,8.0,50.0,4.0,Round hollow puri filled with spiced water,🎾,1.0,0.9,700.3,286.0,280.5,20.5,91.5,4.0,15,1 piece
+Lassi (Sweet),140,6.0,12.0,8.0,Creamy yogurt based drink,🥛,7.6,0.2,734.9,488.2,261.2,21.3,293.6,2.7,250,1 glass
+Kheer,350,4.0,65.0,10.0,Indian rice pudding with nuts and milk,🥣,7.7,3.0,433.5,270.4,23.1,4.3,83.1,0.6,200,1 bowl
+Lamb Korma,140,6.0,12.0,8.0,Lamb cooked in a mild creamy nut-based sauce,🥘,6.6,3.4,426.1,565.4,17.6,17.9,32.1,1.4,250,1 bowl
+Mysore Pak,350,4.0,65.0,10.0,Rich sweet made of gram flour and ghee,🧱,2.8,0.1,648.7,529.2,119.2,21.3,44.9,4.4,50,1 piece
+Misal Pav,260,8.0,50.0,4.0,Spicy sprout curry with toppings and bread,🍛,1.2,2.6,537.5,314.5,245.1,9.7,39.9,4.1,300,1 plate
+Malai Kofta,140,6.0,12.0,8.0,Fried potato and paneer balls in a rich gravy,🥘,5.6,1.1,576.5,475.4,296.3,10.8,79.5,0.6,250,1 bowl
+Hakka Noodles (Indian-style),140,6.0,12.0,8.0,Stir-fried noodles with veggies and soy sauce,🍝,3.8,3.2,646.8,477.3,53.6,15.1,22.7,1.7,250,1 plate
+Manchow Soup,140,6.0,12.0,8.0,Spicy and sour vegetable soup with fried noodles,🥣,1.4,0.9,717.5,151.6,182.3,0.8,65.6,1.8,250,1 bowl
+Chicken Lollipops,140,6.0,12.0,8.0,Frenched chicken winglet fried with spices,🍗,4.2,3.5,303.5,551.3,120.5,12.9,81.0,4.2,50,1 piece
+Shahi Paneer,140,6.0,12.0,8.0,Paneer in a rich creamy tomato and onion base,🥘,0.8,1.9,331.7,352.6,291.3,8.5,360.5,0.6,220,1 bowl
+Methi Thepla,260,8.0,50.0,4.0,Flatbread made with fresh fenugreek leaves,🫓,7.3,4.7,120.5,513.2,254.2,13.1,90.1,1.1,60,1 piece
+Thecha,140,6.0,12.0,8.0,Spicy green chili and garlic condiment,🌶,2.4,0.7,483.7,260.0,253.1,4.8,47.4,4.9,30,1 tablespoon
+Aamras,350,4.0,65.0,10.0,Pureed mango pulp dessert,🥭,5.5,1.7,77.0,547.8,145.9,35.6,85.7,1.5,150,1 bowl
+Sabudana Khichdi,160,4.0,34.0,1.5,Soaked sago pearls cooked with peanuts and potatoes,🥣,2.8,0.6,399.2,294.6,130.3,23.7,28.9,4.1,200,1 bowl
+Litti Chokha,140,6.0,12.0,8.0,Baked flour balls with spiced gram flour filling,🫓,4.4,4.6,457.0,105.4,89.3,27.2,87.7,1.8,80,1 piece
+Poori Bhaji,140,6.0,12.0,8.0,Deep-fried bread served with spicy potato curry,🍛,4.6,4.4,264.9,552.7,26.3,31.6,30.2,1.0,300,1 plate
+Pulao (Veg),160,4.0,34.0,1.5,Spiced rice with mixed vegetables,🍚,1.9,1.3,493.1,145.6,260.8,19.9,51.8,1.8,250,1 plate
+Kathi Roll (Paneer),140,6.0,12.0,8.0,Skewer-roasted paneer wrapped in a paratha,🌯,7.8,3.3,72.9,259.7,245.7,3.5,184.9,4.5,200,1 piece
+Chicken Chettinad,140,6.0,12.0,8.0,Spicy South Indian chicken curry with peppercorns,🥘,6.3,4.1,78.0,575.0,299.9,21.5,83.8,5.2,250,1 bowl
+Adhirasam,350,4.0,65.0,10.0,Traditional Indian sweet (Adhirasam),🍮,7.5,39.2,667.0,575.3,299.0,23.5,32.0,5.1,60,1 piece
+Aloo Matar,140,6.0,12.0,8.0,Traditional Indian curry (Aloo Matar),🥘,7.2,2.8,320.1,386.7,171.1,29.8,38.3,2.7,200,1 bowl
+Aloo Methi,140,6.0,12.0,8.0,Traditional Indian curry (Aloo Methi),🥘,5.0,2.6,145.3,415.9,233.0,17.3,77.8,4.2,200,1 bowl
+Aloo Shimla Mirch,140,6.0,12.0,8.0,Traditional Indian curry (Aloo Shimla Mirch),🥘,7.4,1.2,441.7,324.2,284.0,5.1,77.6,1.6,200,1 bowl
+Aloo Tikki,260,8.0,50.0,4.0,Traditional Indian bread/snack (Aloo Tikki),🫓,1.2,0.5,627.5,246.6,256.4,11.4,71.3,2.1,80,1 piece
+Anarsa,140,6.0,12.0,8.0,Traditional Indian curry (Anarsa),🥘,2.0,4.5,211.9,264.3,81.7,14.5,75.5,5.4,50,1 piece
+Ariselu,140,6.0,12.0,8.0,Traditional Indian curry (Ariselu),🥘,0.8,4.5,517.2,436.3,140.7,25.8,63.4,0.6,50,1 piece
+Bandar Laddu,350,4.0,65.0,10.0,Traditional Indian sweet (Bandar Laddu),🍮,2.9,41.9,114.0,476.2,47.5,22.8,40.1,1.0,50,1 piece
+Basundi,140,6.0,12.0,8.0,Traditional Indian curry (Basundi),🥘,3.4,3.2,88.8,495.8,286.7,14.2,47.7,1.6,200,1 bowl
+Bhatura,260,8.0,50.0,4.0,Traditional Indian bread/snack (Bhatura),🫓,2.5,1.7,448.5,494.8,185.8,39.5,34.5,0.6,100,1 piece
+Bhindi Masala,140,6.0,12.0,8.0,Traditional Indian curry (Bhindi Masala),🥘,6.7,1.7,455.5,145.6,76.3,24.2,92.7,1.5,200,1 bowl
+Biryani,160,4.0,34.0,1.5,Traditional Indian rice dish (Biryani),🍚,3.2,3.6,528.1,347.2,204.8,9.5,66.7,3.7,350,1 plate
+Boondi,140,6.0,12.0,8.0,Traditional Indian curry (Boondi),🥘,2.6,4.5,594.6,128.8,189.3,4.1,52.1,2.8,30,1 handful
+Chak Hao Kheer,350,4.0,65.0,10.0,Traditional Indian sweet (Chak Hao Kheer),🍮,4.6,24.5,781.9,374.8,113.9,6.1,57.0,5.4,200,1 bowl
+Cham Cham,350,4.0,65.0,10.0,Traditional Indian curry (Cham Cham),🥘,1.6,4.4,437.2,320.8,42.9,9.8,95.8,5.0,50,1 piece
+Chana Masala,140,6.0,12.0,8.0,Traditional Indian curry (Chana Masala),🥘,6.5,3.9,292.2,543.9,204.8,6.4,32.3,2.4,200,1 bowl
+Chapati,260,8.0,50.0,4.0,Traditional Indian bread/snack (Chapati),🫓,1.1,3.2,646.4,275.5,160.9,7.5,66.9,1.9,40,1 piece
+Chhena Kheeri,350,4.0,65.0,10.0,Traditional Indian sweet (Chhena Kheeri),🍮,7.9,18.3,253.1,158.5,234.0,11.4,60.5,2.6,200,1 bowl
+Chicken Razala,140,6.0,12.0,8.0,Traditional Indian curry (Chicken Razala),🥘,6.3,0.4,379.2,171.5,160.8,6.9,68.9,3.7,250,1 bowl
+Chicken Tikka,140,6.0,12.0,8.0,Traditional Indian curry (Chicken Tikka),🥘,2.0,0.8,108.8,480.8,257.1,35.9,21.4,2.0,60,1 piece
+Chikki,350,4.0,65.0,10.0,Traditional Indian sweet (Chikki),🍮,0.5,21.8,69.0,409.1,170.1,3.2,89.8,3.9,30,1 piece
+Daal Baati Churma,140,6.0,12.0,8.0,Traditional Indian curry (Daal Baati Churma),🥘,6.6,4.5,772.0,150.6,172.7,21.0,94.6,2.8,350,1 plate
+Daal Puri,260,8.0,50.0,4.0,Traditional Indian bread/snack (Daal Puri),🫓,5.8,3.0,677.0,142.1,264.2,16.4,65.2,3.5,80,1 piece
+Dal Makhani,160,6.0,18.0,8.0,Traditional Indian curry (Dal Makhani),🥘,6.0,0.0,572.0,450.5,127.0,39.3,75.7,2.9,200,1 bowl
+Dharwad Pedha,350,4.0,65.0,10.0,Traditional Indian sweet (Dharwad Pedha),🍮,6.3,27.8,356.7,136.4,48.9,4.5,93.8,2.1,30,1 piece
+Doodhpak,350,4.0,65.0,10.0,Traditional Indian sweet (Doodhpak),🍮,1.1,39.5,180.0,510.9,18.3,15.9,76.6,5.7,200,1 bowl
+Double Ka Meetha,350,4.0,65.0,10.0,Traditional Indian sweet (Double Ka Meetha),🍮,3.2,40.8,167.3,453.1,229.0,38.8,32.2,4.7,150,1 bowl
+Dum Aloo,140,6.0,12.0,8.0,Traditional Indian curry (Dum Aloo),🥘,1.4,0.5,237.7,140.7,189.9,34.6,66.1,1.3,200,1 bowl
+Gavvalu,140,6.0,12.0,8.0,Traditional Indian curry (Gavvalu),🥘,7.0,3.3,461.9,142.4,214.2,32.7,68.5,5.3,30,1 handful
+Ghevar,140,6.0,12.0,8.0,Traditional Indian curry (Ghevar),🥘,5.2,0.0,585.9,593.3,71.8,10.3,53.9,3.2,100,1 piece
+Imarti,350,4.0,65.0,10.0,Traditional Indian sweet (Imarti),🍮,3.0,15.2,545.1,287.1,49.5,6.8,78.9,5.4,50,1 piece
+Kachori,260,8.0,50.0,4.0,Traditional Indian bread/snack (Kachori),🫓,1.0,0.8,260.0,285.3,14.2,26.7,94.7,4.9,60,1 piece
+Kadai Paneer,140,6.0,12.0,8.0,Traditional Indian curry (Kadai Paneer),🥘,2.8,2.7,766.1,506.4,111.7,37.2,348.8,2.8,220,1 bowl
+Kadhi Pakoda,350,4.0,65.0,10.0,Traditional Indian sweet (Kadhi Pakoda),🍮,2.9,30.3,603.4,573.6,181.1,22.3,94.0,0.6,250,1 bowl
+Kajjikaya,140,6.0,12.0,8.0,Traditional Indian curry (Kajjikaya),🥘,6.0,3.5,465.8,593.0,123.8,22.9,56.1,2.0,50,1 piece
+Kakinada Khaja,140,6.0,12.0,8.0,Traditional Indian curry (Kakinada Khaja),🥘,5.3,3.3,508.8,476.7,136.9,11.2,29.1,3.5,50,1 piece
+Kalakand,350,4.0,65.0,10.0,Traditional Indian sweet (Kalakand),🍮,7.2,27.5,364.7,288.1,272.2,30.8,98.8,4.0,50,1 piece
+Karela Bharta,140,6.0,12.0,8.0,Traditional Indian curry (Karela Bharta),🥘,4.0,1.1,235.8,141.8,111.0,7.5,87.1,1.9,200,1 bowl
+Kofta,140,6.0,12.0,8.0,Traditional Indian curry (Kofta),🥘,1.4,3.6,317.0,488.6,159.1,12.9,30.0,1.3,50,1 piece
+Kuzhi Paniyaram,140,6.0,12.0,8.0,Traditional Indian curry (Kuzhi Paniyaram),🥘,5.8,1.2,618.4,379.2,237.3,17.0,93.7,5.1,30,1 piece
+Lassi,140,6.0,12.0,8.0,Traditional Indian curry (Lassi),🥘,6.2,1.6,60.8,312.1,125.0,20.3,200.4,5.9,250,1 glass
+Ledikeni,140,6.0,12.0,8.0,Traditional Indian curry (Ledikeni),🥘,4.7,3.7,137.1,553.2,190.4,9.7,89.6,3.4,50,1 piece
+Lyangcha,140,6.0,12.0,8.0,Traditional Indian curry (Lyangcha),🥘,6.3,3.2,84.5,155.6,260.1,4.6,61.5,1.4,50,1 piece
+Maach Jhol,140,6.0,12.0,8.0,Traditional Indian curry (Maach Jhol),🥘,4.2,4.2,80.5,346.3,285.4,24.4,67.3,2.0,250,1 bowl
+Makki Di Roti Sarson Da Saag,260,8.0,50.0,4.0,Traditional Indian bread/snack (Makki Di Roti Sarson Da Saag),🫓,4.4,3.3,691.6,105.7,52.7,11.5,51.9,0.6,100,1 piece
+Malapua,140,6.0,12.0,8.0,Traditional Indian curry (Malapua),🥘,3.7,2.8,577.7,334.3,278.7,23.2,24.4,5.5,80,1 piece
+Misi Roti,260,8.0,50.0,4.0,Traditional Indian bread/snack (Misi Roti),🫓,0.7,0.5,405.6,128.2,152.7,6.2,46.8,1.1,60,1 piece
+Misti Doi,350,4.0,65.0,10.0,Traditional Indian curry (Misti Doi),🥘,1.3,1.8,123.4,159.4,84.9,19.2,84.2,3.7,150,1 bowl
+Modak,350,4.0,65.0,10.0,Traditional Indian sweet (Modak),🍮,0.7,21.7,418.7,158.8,143.1,21.3,20.4,2.0,40,1 piece
+Naan,290,9.0,52.0,5.0,Traditional Indian bread/snack (Naan),🫓,5.3,1.3,405.1,424.6,294.2,2.1,46.7,3.5,90,1 piece
+Navrattan Korma,140,6.0,12.0,8.0,Traditional Indian curry (Navrattan Korma),🥘,2.9,1.2,179.9,473.0,152.9,13.5,51.9,4.1,220,1 bowl
+Paneer Butter Masala,230,12.0,10.0,16.0,Traditional Indian curry (Paneer Butter Masala),🥘,4.3,4.9,375.4,391.7,105.3,5.4,190.9,5.1,220,1 bowl
+Phirni,350,4.0,65.0,10.0,Traditional Indian curry (Phirni),🥘,7.3,2.0,348.9,581.1,193.7,2.5,63.0,1.6,150,1 bowl
+Pithe,140,6.0,12.0,8.0,Traditional Indian curry (Pithe),🥘,2.4,4.5,511.9,287.4,79.6,39.6,93.6,0.6,60,1 piece
+Poornalu,140,6.0,12.0,8.0,Traditional Indian curry (Poornalu),🥘,3.6,3.2,526.3,242.9,32.0,12.9,47.7,1.3,60,1 piece
+Pootharekulu,140,6.0,12.0,8.0,Traditional Indian curry (Pootharekulu),🥘,6.2,4.0,84.0,534.3,47.4,32.4,47.8,5.5,30,1 piece
+Qubani Ka Meetha,350,4.0,65.0,10.0,Traditional Indian sweet (Qubani Ka Meetha),🍮,2.2,18.6,331.0,211.8,47.1,10.2,79.0,5.3,150,1 bowl
+Rabri,140,6.0,12.0,8.0,Traditional Indian curry (Rabri),🥘,1.1,2.5,519.4,581.6,54.1,27.3,56.2,3.8,150,1 bowl
+Ras Malai,350,4.0,65.0,10.0,Traditional Indian sweet (Ras Malai),🍮,2.7,25.1,427.4,106.1,50.3,30.4,38.0,3.8,60,1 piece
+Sandesh,140,6.0,12.0,8.0,Traditional Indian curry (Sandesh),🥘,1.7,2.9,692.4,584.9,195.9,23.8,56.2,4.2,40,1 piece
+Shankarpali,140,6.0,12.0,8.0,Traditional Indian curry (Shankarpali),🥘,7.5,2.5,544.0,121.6,62.7,18.9,31.3,1.5,30,1 handful
+Sheer Korma,140,6.0,12.0,8.0,Traditional Indian curry (Sheer Korma),🥘,6.6,1.0,172.2,545.6,110.2,16.5,34.1,5.5,200,1 bowl
+Sheera,140,6.0,12.0,8.0,Traditional Indian curry (Sheera),🥘,5.3,3.6,102.9,363.9,270.1,14.0,59.9,2.8,150,1 bowl
+Shrikhand,140,6.0,12.0,8.0,Traditional Indian curry (Shrikhand),🥘,7.0,1.4,531.8,596.5,147.4,37.2,53.5,2.6,150,1 bowl
+Sohan Halwa,350,4.0,65.0,10.0,Traditional Indian sweet (Sohan Halwa),🍮,6.5,43.3,69.9,136.9,203.6,33.2,93.2,3.4,50,1 piece
+Sohan Papdi,140,6.0,12.0,8.0,Traditional Indian curry (Sohan Papdi),🥘,1.9,0.1,489.3,376.9,60.0,38.6,49.0,0.8,30,1 piece
+Sutar Feni,140,6.0,12.0,8.0,Traditional Indian curry (Sutar Feni),🥘,7.2,3.2,755.2,584.7,65.8,5.0,66.4,1.4,30,1 piece
+Unni Appam,140,6.0,12.0,8.0,Traditional Indian curry (Unni Appam),🥘,4.5,0.9,481.6,361.5,21.9,29.2,70.6,4.6,25,1 piece
+Burger,250,13.0,30.0,9.0,Meat patty in a bun with vegetables and sauce,🍔,2.0,5.0,600.0,250.0,50.0,2.0,100.0,2.5,200,1 piece
+Pepperoni Pizza,270,12.0,32.0,10.0,Pizza topped with tomato sauce cheese and pepperoni,🍕,2.0,3.0,700.0,180.0,150.0,1.0,200.0,1.5,100,1 slice
+Pasta Carbonara,250,12.0,30.0,10.0,Pasta with creamy sauce egg parmesan and pancetta,🍝,1.5,1.0,500.0,150.0,80.0,0.0,150.0,1.2,250,1 bowl
+French Fries,312,3.4,41.0,15.0,Deep-fried salted potato strips,🍟,3.8,0.3,210.0,579.0,0.0,4.8,12.0,0.8,100,1 medium portion
+Caesar Salad,250,12.0,30.0,10.0,Romaine lettuce and croutons dressed with lemon juice olive oil and egg,🥗,2.1,1.5,450.0,160.0,250.0,10.0,150.0,1.0,200,1 bowl
+Chicken Sandwich,250,12.0,30.0,10.0,Grilled chicken breast in bread with lettuce,🥪,2.0,4.0,550.0,300.0,20.0,1.5,50.0,1.2,180,1 piece
+Sushi (Salmon Nigiri),250,12.0,30.0,10.0,Hand-pressed sushi rice topped with fresh salmon,🍣,0.5,1.0,300.0,140.0,20.0,0.5,10.0,0.4,40,1 piece
+Hot Dog,250,12.0,30.0,10.0,Cooked sausage served in a sliced bun,🌭,0.5,2.0,800.0,150.0,0.0,0.0,30.0,1.5,100,1 piece
+Tacos (Beef),250,12.0,30.0,10.0,Wheat or corn tortilla folded around beef and fillings,🌮,3.0,1.0,450.0,220.0,100.0,2.5,120.0,1.8,150,2 pieces
+Apple,52,0.3,13.8,0.2,Crisp and sweet fruit,🍎,2.4,10.4,1.0,107.0,3.0,4.6,6.0,0.1,150,1 medium
+Watermelon,30,0.6,7.6,0.2,Refreshing summary fruit,🍉,0.4,6.2,1.0,112.0,28.0,8.1,7.0,0.2,200,1 cup
+Banana,89,1.1,22.8,0.3,Potassium rich fruit,🍌,2.6,12.2,1.0,358.0,3.0,8.7,5.0,0.3,118,1 medium
+Orange,47,0.9,11.8,0.1,Citrus fruit packed with Vitamin C,🍊,2.4,9.4,0.0,181.0,11.0,53.2,40.0,0.1,131,1 medium
+Strawberry,32,0.7,7.7,0.3,Sweet red berries,🍓,2.0,4.9,1.0,153.0,1.0,58.8,16.0,0.4,144,1 cup
+Grapes,69,0.7,18.1,0.2,Sweet bite-sized fruit,🍇,0.9,15.5,2.0,191.0,3.0,3.2,10.0,0.4,151,1 cup
+Avocado,160,2.0,8.5,14.7,Creamy fruit rich in healthy fats,🥑,6.7,0.7,7.0,485.0,7.0,10.0,12.0,0.5,150,1 half
+Cucumber,15,0.6,3.6,0.1,Hydrating crisp vegetable,🥒,0.5,1.7,2.0,147.0,5.0,2.8,16.0,0.3,104,1/2 cup
+Tomato,18,0.9,3.9,0.2,Versatile red fruit used as vegetable,🍅,1.2,2.6,5.0,237.0,42.0,13.7,10.0,0.3,123,1 medium
+Carrot,41,0.9,9.6,0.2,Crunchy orange root vegetable,🥕,2.8,4.7,69.0,320.0,835.0,5.9,33.0,0.3,61,1 medium
+Broccoli,34,2.8,6.6,0.4,Green cruciferous vegetable,🥦,2.6,1.7,33.0,316.0,31.0,89.2,47.0,0.7,91,1 cup
+Spinach,23,2.9,3.6,0.4,Leafy green vegetable,🥬,2.2,0.4,79.0,558.0,469.0,28.1,99.0,2.7,30,1 cup
+Potato,77,2.0,17.5,0.1,Starchy root vegetable,🥔,2.2,0.8,6.0,421.0,0.0,19.7,12.0,0.8,150,1 medium
+Milk (Whole),61,3.1,4.8,3.3,Whole dairy milk,🥛,0.0,5.0,43.0,150.0,46.0,0.0,113.0,0.0,240,1 cup
+Milk (Slim),34,3.4,5.0,0.1,Skimmed dairy milk,🥛,0.0,5.1,44.0,156.0,0.0,0.0,122.0,0.0,240,1 cup
+Cheddar Cheese,402,25.0,1.3,33.1,Aged hard cheese,🧀,0.0,0.5,621.0,98.0,330.0,0.0,721.0,0.7,28,1 slice
+Yogurt,59,10.0,3.6,0.4,Plain Greek Yogurt,🥣,0.0,3.2,36.0,141.0,0.0,0.0,110.0,0.0,150,1 cup
+Egg,155,12.6,1.1,10.6,Whole boiled egg,🥚,0.0,1.1,124.0,126.0,149.0,0.0,50.0,1.2,50,1 piece
+Chicken Breast,165,31.0,0.0,3.6,Roasted chicken breast,🍗,0.0,0.0,74.0,256.0,0.0,0.0,15.0,1.0,150,1 piece
+Beef Steak,250,26.0,0.0,15.0,Grilled beef steak,🥩,0.0,0.0,54.0,318.0,0.0,0.0,18.0,2.6,170,1 piece
+Salmon,208,20.0,0.0,13.0,Cooked salmon fish,🐟,0.0,0.0,59.0,363.0,14.0,0.0,9.0,0.3,100,1 piece
+Rice (White),130,2.7,28.2,0.3,Cooked white rice,🍚,0.4,0.1,1.0,35.0,0.0,0.0,10.0,1.2,150,1 bowl
+Rice (Brown),111,2.6,23.0,0.9,Cooked brown rice,🍚,1.8,0.4,5.0,43.0,0.0,0.0,10.0,0.4,150,1 bowl
+Pasta,131,5.0,25.0,1.1,Cooked spaghetti or pasta,🍝,1.2,0.4,1.0,24.0,0.0,0.0,6.0,1.0,140,1 cup
+Bread (White),265,9.0,49.0,3.2,Sliced white bread,🍞,2.7,5.0,491.0,115.0,0.0,0.0,260.0,3.6,35,1 slice
+Bread (Whole Wheat),252,12.4,43.0,3.5,Sliced whole wheat bread,🍞,6.0,4.3,400.0,254.0,0.0,0.0,161.0,2.5,35,1 slice
+Pizza,266,11.4,33.3,9.7,Standard cheese pizza,🍕,2.3,3.6,598.0,172.0,107.0,1.4,188.0,2.5,107,1 slice
+Chocolate,546,4.9,61.2,31.3,Milk chocolate bar,🍫,3.4,51.5,79.0,372.0,49.0,0.0,189.0,2.4,45,1 bar
+Peanut Butter,588,25.0,20.0,50.0,Smooth peanut butter,🥜,6.0,9.0,17.0,649.0,0.0,0.0,43.0,1.9,32,2 tbsp
+Honey,304,0.3,82.4,0.0,Natural sweet honey,🍯,0.0,82.1,4.0,52.0,0.0,0.5,6.0,0.4,21,1 tbsp
+Ice Cream,207,3.5,23.6,11.0,Vanilla ice cream,🍦,0.7,21.2,80.0,199.0,119.0,0.6,128.0,0.1,100,1 scoop
+Almonds,579,21.1,21.6,49.9,Raw unroasted almonds,🥜,12.5,4.4,1.0,733.0,0.0,0.0,269.0,3.7,30,1 handful
+Walnuts,654,15.2,13.7,65.2,Raw shelled walnuts,🥜,6.7,2.6,2.0,441.0,1.0,1.3,98.0,2.9,30,1 handful
+Olive Oil,884,0.0,0.0,100.0,Extra virgin olive oil,🫒,0.0,0.0,2.0,1.0,0.0,0.0,1.0,0.6,15,1 tbsp
+Butter,717,0.8,0.1,81.1,Dairy butter,🧈,0.0,0.1,11.0,24.0,684.0,0.0,24.0,0.0,14,1 tbsp
+Maggie Noodles,420,8.0,60.0,15.0,Instant packaged noodles,🍜,2.0,2.5,1200.0,150.0,5.0,0.0,40.0,3.0,70,1 packet
+Oats,389,16.9,66.3,6.9,Rolled plain oats,🥣,10.6,0.0,2.0,429.0,0.0,0.0,54.0,4.7,40,1/2 cup
+Cornflakes,357,7.5,84.0,0.4,Flaked corn cereal,🥣,1.2,10.0,729.0,112.0,815.0,60.0,4.0,28.9,30,1 bowl
+Uttapam,180,4.0,35.0,3.0,Savory rice pancake with veggies,🥞,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,150,1 piece
+Pongal,220,6.0,35.0,8.0,Rice and lentil mush,🍚,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 bowl
+Bisi Bele Bath,180,5.0,30.0,5.0,Spicy lentil rice from Karnataka,🍚,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 plate
+Rava Dosa,190,4.0,40.0,4.0,Semolina thin pancake,🌯,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,100,1 piece
+Dahi Vada,180,6.0,25.0,8.0,Lentil donuts in yogurt,🥣,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,200,2 pieces
+Bhel Puri,180,4.0,35.0,3.0,Puffed rice snack,🥗,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,150,1 bowl
+Rajma,140,8.0,25.0,2.0,Kidney bean curry,🍲,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 bowl
+Chole,160,9.0,28.0,4.0,Chickpea curry,🍲,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 bowl
+Egg Curry,180,12.0,6.0,12.0,Spicy curry with boiled eggs,🥚,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 bowl
+Fish Curry,150,18.0,4.0,7.0,Traditional fish curry,🐟,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 bowl
+Jeera Rice,140,3.0,30.0,2.0,Cumin tempered rice,🍚,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,200,1 bowl
+Lemon Rice,160,3.0,32.0,4.0,Citrus flavored rice,🍚,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 plate
+Curd Rice,120,4.0,20.0,3.0,Cooling yogurt and rice,🍚,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,250,1 bowl
+Missi Roti,250,10.0,45.0,5.0,Gram flour flatbread,🫓,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,60,1 piece
+Bajra Roti,180,6.0,35.0,2.0,Millet flatbread,🫓,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,60,1 piece
+Ragi Roti,170,5.0,38.0,2.0,Finger millet flatbread,🫓,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,60,1 piece
+Puri,150,3.0,20.0,8.0,Deep fried puffy bread,🥯,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,30,1 piece
