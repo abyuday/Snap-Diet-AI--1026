@@ -2,10 +2,10 @@ import os
 import sys
 
 # Add backend to path to import services
-sys.path.append(r'c:\Users\srineer\Downloads\DietitianAI\backend')
+sys.path.append(os.path.dirname(__file__))
 from services.food_analyzer import predict_food
 
-img_dir = r'c:\Users\srineer\Downloads\DietitianAI\datasets\Nutrition5k_dataset\imagery\realsense_overhead'
+img_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "datasets", "Nutrition5k_dataset", "imagery", "realsense_overhead"))
 dishes = os.listdir(img_dir)[:5]
 
 for dish in dishes:

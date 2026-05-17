@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-csv_path = r'c:\Users\srineer\Downloads\DietitianAI\datasets\indian_food_nutrition.csv'
+csv_path = r'C:\\Users\\Abyureddy\\Downloads\\DietitianAI\\datasets\\indian_food_nutrition.csv'
 df = pd.read_csv(csv_path)
 
 # Random but realistic simulated micronutrient ranges based on the food type

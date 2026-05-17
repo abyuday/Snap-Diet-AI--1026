@@ -2,7 +2,7 @@ import os
 import sys
 
 # Add backend to path
-sys.path.append(r'c:\Users\srineer\Downloads\DietitianAI\backend')
+sys.path.append(os.path.dirname(__file__))
 from services.food_analyzer import analyze_food_image
 
 # I'll use a dummy valid image file if possible, or just check the code path

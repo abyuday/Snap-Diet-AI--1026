@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-csv_path = r'c:\Users\srineer\Downloads\DietitianAI\datasets\indian_food_nutrition.csv'
+csv_path = r'C:\\Users\\Abyureddy\\Downloads\\DietitianAI\\datasets\\indian_food_nutrition.csv'
 
 # Read original
 df = pd.read_csv(csv_path)

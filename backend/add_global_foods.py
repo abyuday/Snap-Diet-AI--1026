@@ -1,7 +1,7 @@
 import csv
 import os
 
-CSV_PATH = "C:\\Users\\srineer\\Downloads\\DietitianAI\\datasets\\indian_food_nutrition.csv"
+CSV_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "datasets", "indian_food_nutrition.csv"))
 
 # food_name,calories,protein,carbs,fat,description,emoji,fiber_g,sugar_g,sodium_mg,potassium_mg,vitamin_a_mcg,vitamin_c_mg,calcium_mg,iron_mg,standard_portion_grams,portion_unit
 global_foods = [

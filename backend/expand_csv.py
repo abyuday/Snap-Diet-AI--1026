@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-csv_path = r'c:\Users\srineer\Downloads\DietitianAI\datasets\indian_food_nutrition.csv'
+csv_path = r'C:\\Users\\Abyureddy\\Downloads\\DietitianAI\\datasets\\indian_food_nutrition.csv'
 
 # The 80 classes supported by the model
 model_classes = [

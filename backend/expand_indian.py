@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 def expand_indian_nutrition():
-    csv_path = r'c:\Users\srineer\Downloads\DietitianAI\datasets\indian_food_nutrition.csv'
+    csv_path = r'C:\\Users\\Abyureddy\\Downloads\\DietitianAI\\datasets\\indian_food_nutrition.csv'
     if not os.path.exists(csv_path):
         print("CSV not found.")
         return

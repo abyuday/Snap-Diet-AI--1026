@@ -3,8 +3,8 @@ import os
 import csv
 
 def extract_full_nutrition5k():
-    metadata_path = r'c:\Users\srineer\Downloads\DietitianAI\datasets\Nutrition5k_dataset\metadata\dish_metadata_cafe1.csv'
-    output_path = r'c:\Users\srineer\Downloads\DietitianAI\datasets\global_food_nutrition.csv'
+    metadata_path = r'C:\\Users\\Abyureddy\\Downloads\\DietitianAI\\datasets\\Nutrition5k_dataset\metadata\dish_metadata_cafe1.csv'
+    output_path = r'C:\\Users\\Abyureddy\\Downloads\\DietitianAI\\datasets\\global_food_nutrition.csv'
     
     if not os.path.exists(metadata_path):
         print(f"Error: {metadata_path} not found.")

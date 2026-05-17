@@ -7,7 +7,7 @@ def download_ifct():
     print("--- IFCT (Indian Food) Importer ---")
     # Public mirror for IFCT 2017 CSV data
     ifct_url = "https://raw.githubusercontent.com/the-m-lab/IFCT-2017-CSV/master/ifct2017.csv"
-    target = r"c:\Users\srineer\Downloads\DietitianAI\datasets\ifct_2017_full.csv"
+    target = r"C:\Users\Abyureddy\Downloads\DietitianAI\datasets\ifct_2017_full.csv"
     
     if os.path.exists(target):
         print(f"IFCT dataset already exists at {target}")
@@ -28,7 +28,7 @@ def download_ifct():
 def setup_fndds():
     """Setup instructions and folder structure for FNDDS (Western) data."""
     print("\n--- FNDDS (Western Food) Importer ---")
-    fndds_dir = r"c:\Users\srineer\Downloads\DietitianAI\backend\FNDDS"
+    fndds_dir = r"C:\Users\Abyureddy\Downloads\DietitianAI\backend\FNDDS"
     os.makedirs(fndds_dir, exist_ok=True)
     
     print(f"1. Open: https://www.ars.usda.gov/northeast-area/beltsville-md-bhnrc/beltsville-human-nutrition-research-center/food-surveys-research-group/docs/fndds-download-databases/")

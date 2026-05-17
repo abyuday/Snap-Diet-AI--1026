@@ -14,7 +14,7 @@ def test_path():
 if __name__ == "__main__":
     # Simulate being in backend/services/
     # In reality this script is in /tmp, so we need to adjust
-    base_dir = r"c:\Users\srineer\Downloads\DietitianAI"
+    base_dir = os.path.dirname(__file__)
     csv_relative = os.path.join(base_dir, "datasets", "indian_food_nutrition.csv")
     print(f"Actual CSV exists? {os.path.exists(csv_relative)}")
     

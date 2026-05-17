@@ -663,11 +663,42 @@ def _ground_prediction(
             "probable_matches": primary.get("probable_matches", []),
         }
 
-    # --- Ensemble confidence adjustment ---
+    # --- Ensemble confidence adjustment & Indian ViT Bias Prevention ---
+    # Prevent Indian ViT over-bias on non-Indian/mixed foods (fruit salad, burgers, salads, desserts, beverages)
+    non_indian_indicators = [
+        "salad", "fruit", "apple", "banana", "kiwi", "berry", "orange", "grape", "mango", "custard",
+        "dessert", "cake", "ice cream", "juice", "shake", "smoothie", "beverage", "tea", "coffee",
+        "burger", "pizza", "pasta", "fries", "steak", "sushi", "nuggets", "taco", "hot dog", "sandwich",
+        "bread", "soup", "waffle", "pancake", "egg", "toast"
+    ]
+    is_non_indian = any(indicator in food_name.lower() for indicator in non_indian_indicators)
+    
+    if is_non_indian and vit_secondary:
+        print(f"INFO: [Ensemble] Identified non-Indian/mixed food '{food_name}'. Bypassing local Indian ViT cross-validation.", flush=True)
+        vit_secondary = None
+
     if vit_secondary:
         vit_food = vit_secondary["food"].lower().strip()
         vlm_food = food_name.lower().strip()
-        if vit_food == vlm_food or vit_food in vlm_food or vlm_food in vit_food:
+        
+        # Smarter agreement check: require exact match or highly specific matching (not weak subword/substring match)
+        # e.g., if one is 'chicken breast' and another is 'butter chicken', they should NOT agree.
+        def is_strong_ensemble_match(f1, f2):
+            f1_clean = f1.replace("_", " ").strip().lower()
+            f2_clean = f2.replace("_", " ").strip().lower()
+            if f1_clean == f2_clean:
+                return True
+            # Avoid weak overlap of generic words like 'chicken', 'rice', 'dal', 'paneer'
+            words1 = set(f1_clean.split())
+            words2 = set(f2_clean.split())
+            intersection = words1 & words2
+            ignore_words = {"chicken", "rice", "dal", "paneer", "aloo", "curry", "vegetable", "mixed", "fruit", "salad", "sauce", "tikka", "masala"}
+            meaningful_intersection = intersection - ignore_words
+            if meaningful_intersection and len(meaningful_intersection) >= 1:
+                return True
+            return False
+
+        if is_strong_ensemble_match(vlm_food, vit_food):
             # Both models agree: boost confidence
             confidence = min(0.99, confidence + 0.04)
             engine += " + ViT ✓"
@@ -737,7 +768,7 @@ def _ground_prediction(
     except Exception as e:
         print(f"WARNING: [Stage 3] Portion grounding failed: {e}", flush=True)
 
-    # --- Stage 4: VLM Nutrition Fallback ---
+    # --- Stage 4: VLM Nutrition Fallback with Micronutrient Safeguards ---
     # If Stage 2 RAG failed to find ANY nutrition, use the VLM's built-in estimation
     is_vlm_estimate = False
     if not nutrition and primary.get("vlm_nutrition"):
@@ -748,8 +779,14 @@ def _ground_prediction(
             rag = get_rag_service()
             nutrition = rag.scale_nutrition_by_weight(vlm_nut, 100.0, weight_grams)
             is_vlm_estimate = True
+            
+            # Zero out micronutrients to prevent VLM hallucination
+            for micro in ["fiber_g", "sugar_g", "sodium_mg", "potassium_mg", "vitamin_a_mcg", "vitamin_c_mg", "calcium_mg", "iron_mg"]:
+                if micro in nutrition:
+                    nutrition[micro] = 0.0
+            
             engine += " (AI Estimate)"
-            print(f"INFO: [Stage 4] Using VLM Fallback Nutrition for '{food_name}'", flush=True)
+            print(f"INFO: [Stage 4] Using VLM Fallback Nutrition for '{food_name}' (macronutrients kept, micronutrients zeroed to avoid hallucination)", flush=True)
 
     # --- Stage 5: Generic Fallback ---
     # If we STILL have no nutrition (e.g. food not in DB and no VLM nutrition),

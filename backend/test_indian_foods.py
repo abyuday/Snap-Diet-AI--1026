@@ -4,7 +4,7 @@ from tempfile import NamedTemporaryFile
 import sys
 
 # Add backend to path to import services
-sys.path.append(r'c:\Users\srineer\Downloads\DietitianAI\backend')
+sys.path.append(os.path.dirname(__file__))
 from services.food_analyzer import predict_food
 
 # Test images from Wikipedia 
