@@ -3,7 +3,10 @@ import base64
 from openai import OpenAI
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path="backend/.env")
+if os.path.exists(".env"):
+    load_dotenv(".env")
+elif os.path.exists("backend/.env"):
+    load_dotenv("backend/.env")
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 AI_BASE_URL = "https://router.huggingface.co/v1"

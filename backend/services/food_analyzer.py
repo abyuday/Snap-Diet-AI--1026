@@ -30,16 +30,44 @@ _AI_MODEL = os.getenv("AI_MODEL", "Qwen/Qwen2.5-VL-72B-Instruct")
 if "llama" in _AI_MODEL.lower():
     _AI_MODEL = "Qwen/Qwen2.5-VL-72B-Instruct"
 
+# Clean placeholder or empty tokens to prevent 401 router errors
+if _HF_TOKEN and (_HF_TOKEN.strip() == "" or "your_" in _HF_TOKEN.lower()):
+    _HF_TOKEN = None
+if _OPENAI_API_KEY and (_OPENAI_API_KEY.strip() == "" or "your_" in _OPENAI_API_KEY.lower()):
+    _OPENAI_API_KEY = None
+
 _client: Optional[OpenAI] = None
+_vlm_auth_status = "UNKNOWN"
+_vlm_error_reason = "No token provided"
+
+print("=================== CLOUD VLM BOOTSTRAP DIAGNOSTICS ===================", flush=True)
 print(f"DEBUG: HF_TOKEN present: {bool(_HF_TOKEN)}", flush=True)
+print(f"DEBUG: OPENAI_API_KEY present: {bool(_OPENAI_API_KEY)}", flush=True)
+print(f"DEBUG: AI_BASE_URL: {_AI_BASE_URL}", flush=True)
+print(f"DEBUG: AI_MODEL: {_AI_MODEL}", flush=True)
+
 if _HF_TOKEN or _OPENAI_API_KEY:
     try:
         _client = OpenAI(api_key=_HF_TOKEN or _OPENAI_API_KEY, base_url=_AI_BASE_URL)
-        print(f"INFO: Cloud VLM Client initialized with model {_AI_MODEL} using base {_AI_BASE_URL}", flush=True)
+        print("INFO: Performing live authentication check against HuggingFace router...", flush=True)
+        try:
+            _client.models.list()
+            _vlm_auth_status = "AUTHENTICATED"
+            _vlm_error_reason = "None"
+            print("SUCCESS: Cloud VLM Authentication Check Passed!", flush=True)
+        except Exception as auth_err:
+            _vlm_auth_status = "AUTHENTICATION_FAILED"
+            _vlm_error_reason = str(auth_err)
+            print(f"ERROR: Cloud VLM Authentication Check Failed: {auth_err}", flush=True)
     except Exception as e:
+        _vlm_auth_status = "INITIALIZATION_FAILED"
+        _vlm_error_reason = str(e)
         print(f"WARNING: Failed to init Cloud VLM client: {e}", flush=True)
 else:
-    print("WARNING: No HF_TOKEN or OPENAI_API_KEY found. Cloud VLM will be disabled.", flush=True)
+    _vlm_auth_status = "DISABLED"
+    _vlm_error_reason = "HF_TOKEN or OPENAI_API_KEY environment variables are missing or contain placeholder values."
+    print("WARNING: No HF_TOKEN or OPENAI_API_KEY found. Cloud VLM is disabled.", flush=True)
+print("=======================================================================", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +124,12 @@ def get_nutrition_df():
         return _nutrition_df
 
     _BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    _CSV_PATH = os.path.join(_BASE_PATH, "datasets", "indian_food_nutrition.csv")
+    _CSV_PATH = os.path.join(_BASE_PATH, "datasets", "indian_food_nutrition.csv.xls")
+    if not os.path.exists(_CSV_PATH):
+        _CSV_PATH = os.path.join(_BASE_PATH, "datasets", "indian_food_nutrition.csv")
+    
+    if not os.path.exists(_CSV_PATH):
+        _CSV_PATH = "/app/datasets/indian_food_nutrition.csv.xls"
     if not os.path.exists(_CSV_PATH):
         _CSV_PATH = "/app/datasets/indian_food_nutrition.csv"
 
@@ -200,17 +233,18 @@ _SINGLE_IMAGE_PROMPT = """You are a food analysis expert performing dietary asse
 
 Analyze the food in this image. This is a GLOBAL food analysis tool — identify Western dishes (Burgers, Pizza, Pasta, Fries, Steaks, Sushi), Indian dishes, and others.
 
-IMPORTANT: RETURN ONLY A JSON OBJECT. DO NOT ESTIMATE WEIGHT IN GRAMS. Use portion counts.
-- Discrete items: "1 burger", "2 pieces", "3 tacos"
-- Served dishes: "1 plate", "1 bowl", "1 medium portion"
-- Drinks: "1 glass", "1 cup"
-- Detect mixed foods accurately (e.g. "Fruit Salad (Apple, Banana, Kiwi)").
+IMPORTANT: RETURN ONLY A JSON OBJECT. DO NOT ESTIMATE WEIGHT IN GRAMS. 
+Describe the portion in count and container/geometric context (e.g. "1 plate", "0.5 bowl", "3 pieces", "1 glass").
+To ensure high visual realism, explicitly observe:
+- Visual Occupancy: Estimate actual food coverage percentage vs empty plate/bowl border space.
+- Layout Spread vs Compactness: Identify if the food is visually spread in a thin layer (like a salad or rice spread out) or highly compact/piled high/dense.
+- Container Geometry: Note if the food is in a deep bowl, flat plate, tray, skewer, or cup. Add modifiers in the portion description if helpful (e.g., "1 spread out plate", "1 compact bowl", "2 skewered pieces", "1 half-full cup").
 - If the image DOES NOT contain food, or you are unsure, set "food" to "Unable to confidently identify food".
 - Assign a confidence_score between 0.0 and 1.0 based on your certainty.
 - If confidence_score < 0.70 or you identify potential alternatives (like fruit salad vs custard vs dhokla), list up to 3 most probable alternative food matches in a "probable_matches" key, e.g. ["Fruit Salad", "Fruit Custard", "Dhokla"].
 
 JSON Format:
-{"food": "<dish name>", "portion_description": "<portion size>", "confidence_score": <float>, "confidence_note": "<brief detail>", "probable_matches": [<string>], "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}
+{"food": "<dish name>", "portion_description": "<portion size description with spatial modifiers>", "confidence_score": <float>, "confidence_note": "<brief detail>", "probable_matches": [<string>], "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}
 
 Examples:
 {"food": "Burger", "portion_description": "1 piece", "confidence_score": 0.98, "confidence_note": "Sesame bun with patty", "probable_matches": [], "est_calories_100g": 250, "est_protein_100g": 12.0, "est_carbs_100g": 20.0, "est_fat_100g": 14.0, "est_fiber_100g": 1.2, "est_sugar_100g": 4.5, "est_sodium_100g": 450.0, "est_potassium_100g": 200.0, "est_vitamin_a_100g": 10.0, "est_vitamin_c_100g": 2.0, "est_calcium_100g": 50.0, "est_iron_100g": 1.5}
@@ -223,19 +257,19 @@ _MULTI_IMAGE_PROMPT = """You are a food analysis expert. You have multiple image
 Analyze ALL images together. The multiple angles help you:
 - Confirm the dish identity (see toppings, fillings, color from different sides)
 - Count items more accurately (see items that may be hidden in one view)
-- Judge portion size better (thickness, spread, depth visible from side angles)
+- Judge portion size, layout spread, depth, and volume context better (observe thickness, container depth, skewer gaps, and empty margins visible from side angles vs overhead views to reduce single-angle visual bias).
 
 IMPORTANT: Do NOT guess the weight in grams. Instead, describe the portion using standard descriptors:
 - For discrete items: count pieces (e.g., "4 pieces")
-- For served dishes: use containers (e.g., "1 large bowl", "1 plate")
-- For drinks: use glass/cup (e.g., "1 tall glass")
+- For served dishes: use containers with spatial modifiers (e.g., "1 spread out plate", "1 compact bowl", "1 deep dish")
+- For drinks: use glass/cup (e.g., "1 tall glass", "1 half-full cup")
 - Detect mixed foods accurately (e.g. "Fruit Salad (Apple, Banana, Kiwi)").
 - If the images DO NOT contain food, or you are unsure, set "food" to "Unable to confidently identify food".
 - Assign a confidence_score between 0.0 and 1.0 based on your certainty.
 - If confidence_score < 0.70 or you identify potential alternatives (like fruit salad vs custard vs dhokla), list up to 3 most probable alternative food matches in a "probable_matches" key.
 
 Return ONLY a JSON object in this exact format:
-{"food": "<dish name>", "portion_description": "<e.g. 3 pieces>", "confidence_score": <float>, "confidence_note": "<reason>", "probable_matches": [<string>], "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}"""
+{"food": "<dish name>", "portion_description": "<spatial modified portion size description>", "confidence_score": <float>, "confidence_note": "<reason>", "probable_matches": [<string>], "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}"""
 
 _TEXT_LOG_PROMPT = """You are a food analysis expert. The user has provided a text description of what they ate.
 
@@ -262,12 +296,32 @@ def predict_food(image_path: str) -> Dict[str, Any]:
       3. Portion-weight calculator converts description to grams
       4. Nutrition is scaled proportionally to actual portion
     """
+    # Domain Validation Layer Classes
+    SUPPORTED_INDIAN_CLASSES = {
+        "biryani", "butter chicken", "chana masala", "chicken tikka masala", "dal tadka", "dhokla", 
+        "gulab jamun", "halwa", "idli", "naan", "paneer tikka", "pakora", "pav bhaji", "rasgulla", 
+        "samosa", "tandoori chicken", "upma", "vada pav", "dosa"
+    }
+
     # Ensemble: run ViT classifier in parallel context if available
     vit_prediction = _get_vit_prediction(image_path)
 
+    # Cloud VLM Availability Check & Logging
+    is_vlm_active = bool(_client and _vlm_auth_status == "AUTHENTICATED")
+    is_ensemble_mode = bool(is_vlm_active and vit_prediction)
+    
+    print("=================== CLOUD VLM RUNTIME TRACE ===================", flush=True)
+    print(f"Cloud VLM Active Status: {is_vlm_active} (Model: {_AI_MODEL})", flush=True)
+    print(f"Cloud VLM Auth Status: {_vlm_auth_status}", flush=True)
+    if _vlm_auth_status != "AUTHENTICATED":
+        print(f"Cloud VLM Fallback Reason: {_vlm_error_reason}", flush=True)
+    print(f"Ensemble Cross-Validation Active: {is_ensemble_mode}", flush=True)
+    if not is_vlm_active:
+        print("WARNING: Cloud VLM is UNAVAILABLE. Downgrading backend pipeline to Local-Only Mode.", flush=True)
+    print("===============================================================", flush=True)
+
     # Stage 1: Cloud VLM identification
-    print(f"DEBUG: VLM Client initialized: {bool(_client)} (Model: {_AI_MODEL})", flush=True)
-    if _client:
+    if is_vlm_active:
         print(f"DEBUG: Calling _call_vlm_single for {image_path}", flush=True)
         vlm_result = _call_vlm_single(image_path)
         print(f"DEBUG: VLM Result: {bool(vlm_result)}", flush=True)
@@ -275,12 +329,37 @@ def predict_food(image_path: str) -> Dict[str, Any]:
             return _ground_prediction(vlm_result, vit_prediction)
         else:
             print("WARNING: VLM failed or returned Analysis Failed. Falling back to local ViT.", flush=True)
-    else:
-        print("DEBUG: _client is NONE - check HF_TOKEN in .env", flush=True)
 
-    # Stage 2: Fallback to local ViT model alone (ONLY if confidence is strong!)
-    if vit_prediction and vit_prediction.get("confidence", 0) >= 0.70:
-        return _ground_prediction(vit_prediction, None)
+    # Stage 2: Fallback to local ViT model alone (with Strict Local-Only Protection & Domain Validation)
+    if vit_prediction:
+        confidence = vit_prediction.get("confidence", 0)
+        raw_food = vit_prediction.get("food", "").lower().strip()
+        
+        # Domain validation check
+        is_supported_domain = any(cls in raw_food for cls in SUPPORTED_INDIAN_CLASSES)
+        is_high_confidence = (confidence >= 0.98)
+        
+        if is_supported_domain and is_high_confidence:
+            print(f"INFO: Local ViT validated. Class '{raw_food}' belongs to supported Indian-food domain with strict confidence {confidence} >= 0.98.", flush=True)
+            return _ground_prediction(vit_prediction, None)
+        else:
+            reason = ""
+            if not is_supported_domain:
+                reason = f"Class '{raw_food}' is OUT OF SUPPORTED INDIAN-FOOD DOMAIN."
+            elif not is_high_confidence:
+                reason = f"Confidence score ({confidence}) is below strict safety threshold of 0.98."
+            
+            print(f"WARNING: Strict Local Protection Activated. Reason: {reason}. Rejecting prediction to prevent hallucination.", flush=True)
+            return {
+                "food": "Unable to confidently identify food",
+                "confidence": confidence,
+                "nutrition": None,
+                "weight_grams": 0.0,
+                "portion_description": "N/A",
+                "engine": vit_prediction.get("engine", "Local ViT"),
+                "grounded": False,
+                "probable_matches": vit_prediction.get("probable_matches", []),
+            }
 
     print("DEBUG: Falling back to _empty_prediction", flush=True)
     return _empty_prediction()
@@ -291,16 +370,74 @@ def predict_food_multi(image_paths: List[str]) -> Dict[str, Any]:
     Multi-image DietAI24 pipeline (Reliability Mode).
     Sends all images to VLM directly for analysis.
     """
+    # Domain Validation Layer Classes
+    SUPPORTED_INDIAN_CLASSES = {
+        "biryani", "butter chicken", "chana masala", "chicken tikka masala", "dal tadka", "dhokla", 
+        "gulab jamun", "halwa", "idli", "naan", "paneer tikka", "pakora", "pav bhaji", "rasgulla", 
+        "samosa", "tandoori chicken", "upma", "vada pav", "dosa"
+    }
+
     if not image_paths:
         return _empty_prediction()
 
+    # Cloud VLM Availability Check & Logging
+    is_vlm_active = bool(_client and _vlm_auth_status == "AUTHENTICATED")
+    print("=================== MULTI-ANGLE CLOUD VLM RUNTIME TRACE ===================", flush=True)
+    print(f"Cloud VLM Active Status: {is_vlm_active} (Model: {_AI_MODEL})", flush=True)
+    print(f"Cloud VLM Auth Status: {_vlm_auth_status}", flush=True)
+    if _vlm_auth_status != "AUTHENTICATED":
+        print(f"Cloud VLM Fallback Reason: {_vlm_error_reason}", flush=True)
+    if not is_vlm_active:
+        print("WARNING: Cloud VLM is UNAVAILABLE. Downgrading multi-angle pipeline to Local-Only Mode.", flush=True)
+    print("===========================================================================", flush=True)
+
     # Multi-image VLM call (Bypass local YOLO/ViT for submission reliability)
-    if _client:
+    if is_vlm_active:
         vlm_result = _call_vlm_multi(image_paths)
         if vlm_result and vlm_result.get("food") != "Analysis Failed":
             vlm_result["images_used"] = len(image_paths)
             # Use raw VLM results without local grounding for speed
             return _ground_prediction(vlm_result, None)
+
+    # Robust local ViT ensemble on ALL images if Cloud VLM is disabled/unavailable
+    print(f"INFO: [Ensemble] Cloud VLM is disabled. Processing all {len(image_paths)} images with local ViT ensemble.", flush=True)
+    best_vit_prediction = None
+    for path in image_paths:
+        vit_pred = _get_vit_prediction(path)
+        if vit_pred:
+            if not best_vit_prediction or vit_pred.get("confidence", 0) > best_vit_prediction.get("confidence", 0):
+                best_vit_prediction = vit_pred
+
+    if best_vit_prediction:
+        confidence = best_vit_prediction.get("confidence", 0)
+        best_vit_prediction["images_used"] = len(image_paths)
+        raw_food = best_vit_prediction.get("food", "").lower().strip()
+        
+        # Domain validation check
+        is_supported_domain = any(cls in raw_food for cls in SUPPORTED_INDIAN_CLASSES)
+        is_high_confidence = (confidence >= 0.98)
+        
+        if is_supported_domain and is_high_confidence:
+            print(f"INFO: Local ViT ensemble validated. Class '{raw_food}' belongs to supported Indian-food domain with strict confidence {confidence} >= 0.98.", flush=True)
+            return _ground_prediction(best_vit_prediction, None)
+        else:
+            reason = ""
+            if not is_supported_domain:
+                reason = f"Class '{raw_food}' is OUT OF SUPPORTED INDIAN-FOOD DOMAIN."
+            elif not is_high_confidence:
+                reason = f"Ensemble confidence score ({confidence}) is below strict safety threshold of 0.98."
+            
+            print(f"WARNING: Strict Local Protection Activated in Ensemble. Reason: {reason}. Rejecting prediction.", flush=True)
+            return {
+                "food": "Unable to confidently identify food",
+                "confidence": confidence,
+                "nutrition": None,
+                "weight_grams": 0.0,
+                "portion_description": "N/A",
+                "engine": best_vit_prediction.get("engine", "Local ViT Ensemble"),
+                "grounded": False,
+                "probable_matches": best_vit_prediction.get("probable_matches", []),
+            }
 
     # Fallback to single-image prediction
     return predict_food(image_paths[0])
@@ -448,6 +585,9 @@ def _call_vlm_single(image_path: str) -> Optional[Dict[str, Any]]:
                 "portion_description": parsed.get("portion_description", "1 serving"),
                 "confidence_note": parsed.get("confidence_note", ""),
                 "probable_matches": probable_matches,
+                "visual_occupancy_ratio": float(parsed.get("visual_occupancy_ratio", 1.0)),
+                "layout_density_factor": float(parsed.get("layout_density_factor", 1.0)),
+                "serving_size_multiplier": float(parsed.get("serving_size_multiplier", 1.0)),
                 "vlm_nutrition": {
                     "calories": float(parsed.get("est_calories_100g", 0)),
                     "protein": float(parsed.get("est_protein_100g", 0)),
@@ -567,6 +707,9 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
                 "portion_description": parsed.get("portion_description", "1 serving"),
                 "confidence_note": parsed.get("confidence_note", ""),
                 "probable_matches": probable_matches,
+                "visual_occupancy_ratio": float(parsed.get("visual_occupancy_ratio", 1.0)),
+                "layout_density_factor": float(parsed.get("layout_density_factor", 1.0)),
+                "serving_size_multiplier": float(parsed.get("serving_size_multiplier", 1.0)),
                 "vlm_nutrition": {
                     "calories": float(parsed.get("est_calories_100g", 0)),
                     "protein": float(parsed.get("est_protein_100g", 0)),
@@ -614,6 +757,7 @@ def _get_vit_prediction(image_path: str) -> Optional[Dict[str, Any]]:
         results = clf(img)
 
         if results:
+            top_matches = [r["label"].replace("_", " ").title() for r in results[:3]]
             top = results[0]
             label = top["label"].replace("_", " ")
             score = round(top["score"], 4)
@@ -623,6 +767,7 @@ def _get_vit_prediction(image_path: str) -> Optional[Dict[str, Any]]:
                 "portion_description": "1 serving",
                 "confidence": score,
                 "engine": f"Local ViT ({_VIT_MODEL_ID})",
+                "probable_matches": top_matches,
             }
     except Exception as e:
         print(f"WARNING: [Ensemble] ViT failed: {e}", flush=True)
@@ -701,12 +846,30 @@ def _ground_prediction(
         if is_strong_ensemble_match(vlm_food, vit_food):
             # Both models agree: boost confidence
             confidence = min(0.99, confidence + 0.04)
-            engine += " + ViT ✓"
-            print(f"INFO: [Ensemble] VLM+ViT AGREE on '{food_name}'. Confidence → {confidence}", flush=True)
+            engine += " + ViT [OK]"
+            print(f"INFO: [Ensemble] VLM+ViT AGREE on '{food_name}'. Confidence -> {confidence}", flush=True)
         else:
-            # Models disagree: note it but trust VLM (it sees more context)
-            engine += f" (ViT: {vit_secondary['food']})"
-            print(f"INFO: [Ensemble] VLM='{food_name}' vs ViT='{vit_secondary['food']}'. Trusting VLM.", flush=True)
+            # Ensemble Harmonization: If VLM has low confidence but local ViT is extremely certain of a specialized Indian dish
+            if confidence < 0.75 and vit_secondary.get("confidence", 0.0) > 0.95:
+                from services.rag_service import get_rag_service
+                rag = get_rag_service()
+                vit_match = rag._find_portion_info(vit_food)
+                if vit_match:
+                    print(f"INFO: [Ensemble Harmonization] VLM confidence is low ({confidence}) but Local ViT is extremely confident ({vit_secondary['confidence']}) on specialized Indian dish '{vit_secondary['food']}'. Harmonizing consensus.", flush=True)
+                    food_name = vit_secondary["food"].title()
+                    confidence = 0.90
+                    engine += f" + ViT [Consensus Switch]"
+                else:
+                    engine += f" (ViT: {vit_secondary['food']})"
+            else:
+                # Models disagree: note it but trust VLM (it sees more context)
+                engine += f" (ViT: {vit_secondary['food']})"
+                print(f"INFO: [Ensemble] VLM='{food_name}' vs ViT='{vit_secondary['food']}'. Trusting VLM.", flush=True)
+
+    # --- Stage 1.5: Extract VLM Spatial Sizing & Visual Parameters ---
+    vlm_occupancy = float(primary.get("visual_occupancy_ratio", 1.0))
+    vlm_density = float(primary.get("layout_density_factor", 1.0))
+    vlm_multiplier = float(primary.get("serving_size_multiplier", 1.0))
 
     # --- Stage 2: RAG retrieval ---
     nutrition = None
@@ -715,7 +878,7 @@ def _ground_prediction(
         rag = get_rag_service()
         nutrition = rag.query_nutrition(food_name)
         if nutrition:
-            print(f"INFO: [Stage 2] RAG matched: '{food_name}' → '{nutrition.get('food_name', food_name)}'", flush=True)
+            print(f"INFO: [Stage 2] RAG matched: '{food_name}' -> '{nutrition.get('food_name', food_name)}'", flush=True)
     except Exception as e:
         print(f"WARNING: [Stage 2] RAG failed: {e}. Falling back to CSV.", flush=True)
 
@@ -725,13 +888,27 @@ def _ground_prediction(
         if nutrition:
             print(f"INFO: [Stage 2] CSV matched: '{food_name}'", flush=True)
 
+    # --- Stage 2.5: Semantic Nutritional Harmonization (Visual Reality + Grounded Anchor) ---
+    vlm_nut = primary.get("vlm_nutrition")
+    if nutrition and vlm_nut and vlm_nut.get("calories", 0) > 0:
+        print(f"INFO: [Ensemble] Harmonizing database standard nutrition anchor with VLM visual composition...", flush=True)
+        for key in ["calories", "protein", "carbs", "fat"]:
+            if key in nutrition and key in vlm_nut:
+                db_val = float(nutrition[key])
+                vlm_val = float(vlm_nut[key])
+                # Anchor heavily to DB standard recipe (80%), but blend in visual reality (20%)
+                nutrition[key] = round(0.80 * db_val + 0.20 * vlm_val, 1)
+
     # --- Stage 3: Portion-weight grounding ---
     weight_grams = 0.0
     grounded = False
     try:
         from services.rag_service import get_rag_service
         rag = get_rag_service()
-        portion_result = rag.query_portion_weight(food_name, portion_desc)
+        portion_result = rag.query_portion_weight(
+            food_name, portion_desc,
+            vlm_occupancy=vlm_occupancy, vlm_density=vlm_density, vlm_multiplier=vlm_multiplier
+        )
         weight_grams = portion_result["estimated_weight_grams"]
         grounded = portion_result["grounded"]
         portion_desc = portion_result["portion_description"]
@@ -798,6 +975,13 @@ def _ground_prediction(
             "carbs": 15.0,
             "fat": 7.0,
             "fiber_g": 2.0,
+            "sugar_g": 1.5,
+            "sodium_mg": 250.0,
+            "potassium_mg": 150.0,
+            "vitamin_a_mcg": 50.0,
+            "vitamin_c_mg": 5.0,
+            "calcium_mg": 40.0,
+            "iron_mg": 1.0,
             "standard_portion_grams": 100.0
         }
         if weight_grams <= 0:
@@ -858,7 +1042,13 @@ def _prediction_to_response(prediction: Dict[str, Any]) -> Dict[str, Any]:
     grounded = prediction.get("grounded", False)
     probable_matches = prediction.get("probable_matches", [])
 
-    is_unreliable = "empty plate" in food_name.lower() or "no food" in food_name.lower() or "unable to confidently" in food_name.lower() or confidence < 0.65
+    is_unreliable = (
+        "empty plate" in food_name.lower()
+        or "no food" in food_name.lower()
+        or "unable to confidently" in food_name.lower()
+        or confidence < 0.70
+        or not grounded
+    )
 
     if is_unreliable:
         weight_grams = 0.0
@@ -871,7 +1061,7 @@ def _prediction_to_response(prediction: Dict[str, Any]) -> Dict[str, Any]:
         nutrition = None # Force zeroes to disable saving in ResultsScreen
 
     if nutrition and not is_unreliable:
-        return {
+        response_dict = {
             "food_name": food_name.title(),
             "portion_size": portion_desc,
             "estimated_weight_grams": weight_grams,
@@ -895,23 +1085,44 @@ def _prediction_to_response(prediction: Dict[str, Any]) -> Dict[str, Any]:
                 "images_used": prediction.get("images_used", 1),
             },
         }
+    else:
+        # No nutrition match or unreliable prediction — return zeroes
+        response_dict = {
+            "food_name": food_name,
+            "portion_size": portion_desc,
+            "estimated_weight_grams": weight_grams,
+            "calories": 0.0,
+            "protein": 0.0,
+            "carbs": 0.0,
+            "fat": 0.0,
+            "fiber_g": 0.0,
+            "sugar_g": 0.0,
+            "sodium_mg": 0.0,
+            "potassium_mg": 0.0,
+            "vitamin_a_mcg": 0.0,
+            "vitamin_c_mg": 0.0,
+            "calcium_mg": 0.0,
+            "iron_mg": 0.0,
+            "raw_data": {
+                "engine": engine,
+                "confidence": confidence,
+                "grounded_weight": grounded,
+                "note": "Unreliable prediction or no nutrition data found in database",
+            },
+        }
 
-    # No nutrition match or unreliable prediction — return zeroes
-    return {
-        "food_name": food_name,
-        "portion_size": portion_desc,
-        "estimated_weight_grams": weight_grams,
-        "calories": 0.0,
-        "protein": 0.0,
-        "carbs": 0.0,
-        "fat": 0.0,
-        "raw_data": {
-            "engine": engine,
-            "confidence": confidence,
-            "grounded_weight": grounded,
-            "note": "Unreliable prediction or no nutrition data found in database",
-        },
-    }
+    # PRODUCTION-QUALITY REALTIME RUNTIME LOGGING
+    print("=================== DIETAI PRODUCTION INFERENCE LOG ===================", flush=True)
+    print(f"Uploaded Image Count: {response_dict.get('raw_data', {}).get('images_used', 1)}", flush=True)
+    print(f"Ensemble Predictions: {engine}", flush=True)
+    print(f"Confidence Scores: {confidence:.4f}", flush=True)
+    print(f"Final Grounded Food Label: {response_dict.get('food_name')}", flush=True)
+    print(f"Portion Size & Weight: {response_dict.get('portion_size')} ({response_dict.get('estimated_weight_grams')}g)", flush=True)
+    print(f"Nutrition Source / Methodology: {response_dict.get('raw_data', {}).get('methodology', 'Heuristic')}", flush=True)
+    print(f"Serialized API Response: {json.dumps(response_dict, indent=2)}", flush=True)
+    print("=========================================================================", flush=True)
+
+    return response_dict
 
 
 # ---------------------------------------------------------------------------

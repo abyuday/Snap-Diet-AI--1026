@@ -35,6 +35,28 @@ _PORTION_NUMBER_WORDS = {
     "quarter": 0.25, "dozen": 12, "couple": 2,
 }
 
+# Maps local classifier classes to registered high-detail database dishes
+VIT_TO_DB_MAPPING = {
+    "pakora": "Samosa",
+    "chana masala": "Dal Tadka",
+    "upma": "Poha",
+    "halwa": "Gajar Ka Halwa",
+    "dosa": "Masala Dosa",
+    "naan": "Naan Bread",
+    "paneer tikka": "Paneer Tikka",
+    "butter chicken": "Butter Chicken",
+    "chicken tikka masala": "Chicken Tikka Masala",
+    "dal tadka": "Dal Tadka",
+    "dhokla": "Dhokla",
+    "gulab jamun": "Gulab Jamun",
+    "idli": "Idli",
+    "pav bhaji": "Pav Bhaji",
+    "rasgulla": "Rasgulla",
+    "samosa": "Samosa",
+    "tandoori chicken": "Tandoori Chicken",
+    "vada pav": "Vada Pav",
+}
+
 def _dietai_safe_float(val, default=0.0):
     try:
         if pd.isna(val): return default
@@ -97,12 +119,8 @@ def normalize_portion_unit(portion_description: str) -> str:
 
 class RAGService:
     def __init__(self):
-        self.use_fake = True  # Default to fake if no API key
-        if os.getenv("OPENAI_API_KEY"):
-            self.embeddings = OpenAIEmbeddings()
-            self.use_fake = False
-        else:
-            self.embeddings = DeterministicFakeEmbedding(size=1536)
+        self.use_fake = True  # Always use fake embeddings in fast-mode since Chroma vector search is bypassed
+        self.embeddings = DeterministicFakeEmbedding(size=1536)
 
         # Core lookup dictionaries
         self._name_lookup: Dict[str, Dict] = {}     # keyword -> nutrition dict
@@ -114,7 +132,11 @@ class RAGService:
 
     def _load_density(self):
         """Loads food density table for volumetric weight heuristic fallback."""
-        density_path = os.path.join(os.path.dirname(__file__), "..", "..", "datasets", "food_density.csv")
+        density_path = os.path.join(os.path.dirname(__file__), "..", "..", "datasets", "food_density.csv.xls")
+        if not os.path.exists(density_path):
+            density_path = os.path.join(os.path.dirname(__file__), "..", "..", "datasets", "food_density.csv")
+        if not os.path.exists(density_path):
+            density_path = "datasets/food_density.csv.xls"
         if not os.path.exists(density_path):
             density_path = "datasets/food_density.csv"
         
@@ -180,7 +202,15 @@ class RAGService:
         # -----------------------------------------------------------
         # 2. Indian Food Expansion (Primary Knowledge Base)
         # -----------------------------------------------------------
-        indian_path = "datasets/indian_food_nutrition.csv"
+        _BASE_DATASETS = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "datasets"))
+        indian_path = os.path.join(_BASE_DATASETS, "indian_food_nutrition.csv.xls")
+        if not os.path.exists(indian_path):
+            indian_path = os.path.join(_BASE_DATASETS, "indian_food_nutrition.csv")
+        if not os.path.exists(indian_path):
+            indian_path = "/app/datasets/indian_food_nutrition.csv.xls"
+        if not os.path.exists(indian_path):
+            indian_path = "/app/datasets/indian_food_nutrition.csv"
+        
         if os.path.exists(indian_path):
             try:
                 df = pd.read_csv(indian_path)
@@ -257,7 +287,15 @@ class RAGService:
         # -----------------------------------------------------------
         # 2b. Full INDB / IFCT 2017 Expansion (1,000+ items)
         # -----------------------------------------------------------
-        ifct_path = "datasets/ifct_2017_full.csv"
+        _BASE_DATASETS = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "datasets"))
+        ifct_path = os.path.join(_BASE_DATASETS, "ifct_2017_full.csv.xls")
+        if not os.path.exists(ifct_path):
+            ifct_path = os.path.join(_BASE_DATASETS, "ifct_2017_full.csv")
+        if not os.path.exists(ifct_path):
+            ifct_path = "/app/datasets/ifct_2017_full.csv.xls"
+        if not os.path.exists(ifct_path):
+            ifct_path = "/app/datasets/ifct_2017_full.csv"
+        
         if os.path.exists(ifct_path):
             try:
                 df_ifct = pd.read_csv(ifct_path)
@@ -280,9 +318,13 @@ class RAGService:
                         "carbs": carbs,
                         "fat": fat,
                         "fiber_g": _dietai_safe_float(row.get('fibre_g')),
-                        "iron_mg": _dietai_safe_float(row.get('iron_mg')),
-                        "calcium_mg": _dietai_safe_float(row.get('calcium_mg')),
+                        "sugar_g": _dietai_safe_float(row.get('freesugar_g')),
                         "sodium_mg": _dietai_safe_float(row.get('sodium_mg')),
+                        "potassium_mg": _dietai_safe_float(row.get('potassium_mg')),
+                        "vitamin_a_mcg": _dietai_safe_float(row.get('vita_ug')),
+                        "vitamin_c_mg": _dietai_safe_float(row.get('vitc_mg')),
+                        "calcium_mg": _dietai_safe_float(row.get('calcium_mg')),
+                        "iron_mg": _dietai_safe_float(row.get('iron_mg')),
                         "standard_portion_grams": 100.0,
                         "portion_unit": "100g",
                         "source": "INDB_Full"
@@ -297,12 +339,13 @@ class RAGService:
                         "carbs": carbs,
                         "fat": fat,
                         "fiber_g": meta["fiber_g"],
-                        "iron_mg": meta["iron_mg"],
-                        "calcium_mg": meta["calcium_mg"],
+                        "sugar_g": meta["sugar_g"],
                         "sodium_mg": meta["sodium_mg"],
-                        "fiber_g": meta["fiber_g"],
-                        "iron_mg": meta["iron_mg"],
+                        "potassium_mg": meta["potassium_mg"],
+                        "vitamin_a_mcg": meta["vitamin_a_mcg"],
+                        "vitamin_c_mg": meta["vitamin_c_mg"],
                         "calcium_mg": meta["calcium_mg"],
+                        "iron_mg": meta["iron_mg"],
                         "source": "INDB Full Database"
                     }
                     name_lookup[name_lower] = rec
@@ -429,7 +472,11 @@ class RAGService:
             }
 
         # Indian CSV
-        indian_path = "datasets/indian_food_nutrition.csv"
+        _BASE_DATASETS = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "datasets"))
+        indian_path = os.path.join(_BASE_DATASETS, "indian_food_nutrition.csv.xls")
+        if not os.path.exists(indian_path):
+            indian_path = os.path.join(_BASE_DATASETS, "indian_food_nutrition.csv")
+        
         if os.path.exists(indian_path):
             try:
                 df = pd.read_csv(indian_path)
@@ -589,6 +636,13 @@ class RAGService:
         Finds the closest matching food from the vector database.
         Falls back to keyword lookup if vector search returns weak results.
         """
+        # Apply translation for local classifier mismatch mapping
+        food_lower = query.lower().strip()
+        translated_food = VIT_TO_DB_MAPPING.get(food_lower)
+        if translated_food:
+            print(f"INFO [RAG]: Translated local prediction '{query}' to database dish '{translated_food}'", flush=True)
+            query = translated_food
+
         # First try keyword (fast, no API needed)
         keyword_result = self.query_nutrition_by_keywords(query)
         
@@ -634,7 +688,107 @@ class RAGService:
     # DietAI24-style portion-weight grounding
     # ------------------------------------------------------------------
 
-    def query_portion_weight(self, food_name: str, portion_description: str = "") -> Dict[str, Any]:
+    # ------------------------------------------------------------------
+    # DietAI24-style portion-weight grounding
+    # ------------------------------------------------------------------
+
+    def _refine_and_sanitize_portion_weight(
+        self, food_name: str, raw_weight: float, portion_desc: str, portion_count: float,
+        vlm_occupancy: float = 1.0, vlm_density: float = 1.0, vlm_multiplier: float = 1.0
+    ) -> Tuple[float, str]:
+        """
+        Generalized refinement of the portion weight estimation system.
+        Refines raw visual weights using density-aware bounds, container contexts,
+        spread vs compact multipliers, and human-like serving calibrations.
+        """
+        food_lower = food_name.lower().strip()
+        desc_lower = (portion_desc or "").lower()
+
+        # 1. Density-Aware Dynamic Classification
+        is_lightweight = any(w in food_lower for w in ["salad", "lettuce", "leafy", "spinach", "cabbage", "veg", "onion", "tomato", "cucumber", "sprout", "popcorn"])
+        is_liquid = any(w in food_lower for w in ["juice", "soup", "beverage", "tea", "coffee", "milk", "water", "smoothie", "shake", "dal", "sambar", "broth", "curry"])
+        is_dense = any(w in food_lower for w in ["paneer", "chicken", "beef", "mutton", "fish", "meat", "tikka", "kebab", "rice", "biryani", "pork", "tofu", "cheese", "butter", "naan", "roti", "bread"])
+        is_dessert = any(w in food_lower for w in ["halwa", "jamun", "rasgulla", "cake", "ice cream", "pudding", "sweet", "dessert", "chocolate"])
+        is_mixed = any(w in food_lower for w in ["platter", "thali", "combo", "meal", "mixed"])
+
+        # 2. Visual Spread & Container Context Adjustments
+        spread_multiplier = 1.0
+        
+        # Primary Multimodal Semantic Reasoner Override
+        if vlm_occupancy > 0.0 and vlm_occupancy != 1.0:
+            spread_multiplier *= vlm_occupancy
+            print(f"INFO [Portion Calibration]: Using VLM-reasoned visual occupancy: {vlm_occupancy}", flush=True)
+        else:
+            # Fallback text-based layout context
+            if any(w in desc_lower for w in ["spread", "thin", "scattered", "skewered", "light", "empty", "space"]):
+                spread_multiplier *= 0.70
+            if any(w in desc_lower for w in ["compact", "stacked", "piled", "dense", "heaping", "full"]):
+                spread_multiplier *= 1.20
+
+        # Adjust for lightweight visual spreads
+        if is_lightweight:
+            spread_multiplier *= 0.75
+
+        # Container context modifiers
+        container_multiplier = 1.0
+        if vlm_density > 0.0 and vlm_density != 1.0:
+            container_multiplier *= vlm_density
+            print(f"INFO [Portion Calibration]: Using VLM-reasoned density factor: {vlm_density}", flush=True)
+        else:
+            if "skewer" in desc_lower:
+                container_multiplier *= 0.80  # Skewered food has gaps
+            elif "tray" in desc_lower or "plate" in desc_lower:
+                container_multiplier *= 0.85
+
+        refined_weight = raw_weight * spread_multiplier * container_multiplier
+
+        # 3. Human-Like Serving Calibration (Dampen extremely high mathematical visual estimates)
+        if vlm_multiplier > 0.0 and vlm_multiplier != 1.0:
+            print(f"INFO [Portion Calibration]: Using VLM-reasoned serving multiplier: {vlm_multiplier}", flush=True)
+            if vlm_multiplier > 1.3:
+                calibrated_mult = 1.3 + (vlm_multiplier - 1.3) * 0.6
+            else:
+                calibrated_mult = vlm_multiplier
+            refined_weight = (raw_weight / max(0.1, portion_count)) * calibrated_mult
+        else:
+            if portion_count > 1.3:
+                refined_count = 1.3 + (portion_count - 1.3) * 0.6
+                if portion_count > 0:
+                    refined_weight = refined_weight * (refined_count / portion_count)
+
+        # 4. Strict Validation Layer & Ceilings
+        min_weight = 15.0
+        max_weight = 750.0 # Default max single human serving limit
+
+        if is_lightweight:
+            max_weight = 220.0 # Salads/veggies capped at 220g per serving
+            min_weight = 30.0
+        elif is_dessert:
+            max_weight = 200.0 # Desserts capped at 200g
+            min_weight = 25.0
+        elif is_liquid:
+            max_weight = 500.0 # Liquids capped at 500ml/g
+            min_weight = 50.0
+        elif is_dense:
+            max_weight = 450.0 # Dense meals capped at 450g per serving
+            min_weight = 40.0
+        elif is_mixed:
+            max_weight = 650.0 # Platter/combo thalis capped at 650g
+
+        # Apply bounds
+        if refined_weight > max_weight:
+            print(f"INFO [Portion Validation]: Capping excessive estimated portion weight {refined_weight}g to safe human limit {max_weight}g for '{food_name}'", flush=True)
+            refined_weight = max_weight
+        elif 0.0 < refined_weight < min_weight:
+            print(f"INFO [Portion Validation]: Elevating unrealistic small portion weight {refined_weight}g to minimum limit {min_weight}g for '{food_name}'", flush=True)
+            refined_weight = min_weight
+
+        return round(refined_weight, 1), f"{portion_desc} (Refined)"
+
+    def query_portion_weight(
+        self, food_name: str, portion_description: str = "",
+        vlm_occupancy: float = 1.0, vlm_density: float = 1.0, vlm_multiplier: float = 1.0
+    ) -> Dict[str, Any]:
         """
         DietAI24 approach: Given a food name and a VLM portion description,
         calculate the actual weight in grams using the FNDDS/CSV portion database.
@@ -642,19 +796,13 @@ class RAGService:
         Instead of trusting VLM weight guesses, we:
         1. Look up the standard portion weight for the food (e.g., Idli = 40g/piece)
         2. Parse the VLM's portion count (e.g., "3 pieces" -> 3)
-        3. Calculate: weight = count × standard_grams_per_unit
-
-        Returns:
-            {
-                "food_name": str,
-                "estimated_weight_grams": float,
-                "portion_description": str,
-                "standard_portion_grams": float,
-                "portion_count": float,
-                "grounded": bool   # True if we used DB data, False if using VLM estimate
-            }
+        3. Calculate: weight = count * standard_grams_per_unit
         """
         food_lower = food_name.lower().strip()
+        translated_food = VIT_TO_DB_MAPPING.get(food_lower)
+        if translated_food:
+            food_name = translated_food
+            food_lower = translated_food.lower().strip()
         if "empty plate" in food_lower or "no food" in food_lower:
             return {
                 "food_name": "No Food Detected",
@@ -677,14 +825,19 @@ class RAGService:
             # Catch raw gram inputs (e.g. "550 grams")
             desc_lower = (portion_description or "").lower()
             if "gram" in desc_lower or " g " in f" {desc_lower} " or desc_lower.endswith("g") or desc_lower.endswith("gms"):
-                estimated_weight = round(portion_count, 1)
+                raw_weight = float(portion_count)
             else:
-                estimated_weight = round(portion_count * std_grams, 1)
+                raw_weight = float(portion_count * std_grams)
+
+            refined_weight, refined_desc = self._refine_and_sanitize_portion_weight(
+                portion_info["food_name"], raw_weight, portion_description or portion_info["portion_unit"], portion_count,
+                vlm_occupancy, vlm_density, vlm_multiplier
+            )
 
             return {
                 "food_name": portion_info["food_name"],
-                "estimated_weight_grams": estimated_weight,
-                "portion_description": portion_description or portion_info["portion_unit"],
+                "estimated_weight_grams": refined_weight,
+                "portion_description": refined_desc,
                 "standard_portion_grams": std_grams,
                 "portion_count": portion_count,
                 "grounded": True,
@@ -705,12 +858,16 @@ class RAGService:
             elif "glass" in unit:
                 volume_cm3 = 240
             
-            estimated_weight = round(portion_count * volume_cm3 * density, 1)
+            raw_weight = float(portion_count * volume_cm3 * density)
+            refined_weight, refined_desc = self._refine_and_sanitize_portion_weight(
+                food_name, raw_weight, portion_description or f"{portion_count} serving", portion_count,
+                vlm_occupancy, vlm_density, vlm_multiplier
+            )
             
             return {
                 "food_name": food_name,
-                "estimated_weight_grams": estimated_weight,
-                "portion_description": portion_description or f"{portion_count} serving",
+                "estimated_weight_grams": refined_weight,
+                "portion_description": refined_desc,
                 "standard_portion_grams": round(volume_cm3 * density, 1),
                 "portion_count": portion_count,
                 "grounded": True, # Pseudo-grounded via density

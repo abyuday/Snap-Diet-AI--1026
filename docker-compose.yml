@@ -63,6 +63,8 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - MONGO_URL=mongodb://admin:adminpassword@mongo:27017/
+      - HF_TOKEN
+      - OPENAI_API_KEY
     volumes:
       - ./backend:/app
       - ./datasets:/app/datasets

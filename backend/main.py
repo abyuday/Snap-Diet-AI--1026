@@ -273,7 +273,7 @@ async def add_history(entry: HistoryEntryCreate, current_user: dict = Depends(ge
         return existing
 
     result = await history_collection.insert_one(entry_dict)
-    entry_dict["id"] = str(result.inserted_id)
+    entry_dict["id"] = str(entry_dict.pop("_id"))
     return entry_dict
 
 @app.get("/")
