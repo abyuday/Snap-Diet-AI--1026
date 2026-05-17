@@ -75,13 +75,19 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.watch<ThemeProvider>().isDark;
+    final bg = isDark ? AppTheme.darkBg : AppTheme.lightBg;
+    final surf = isDark ? AppTheme.darkSurface : AppTheme.lightSurface;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textMuted = isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted;
+
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -98,7 +104,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
               Text(
                 'Barcode Scan',
                 style: GoogleFonts.outfit(
-                  color: Colors.white,
+                  color: textPrimary,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
@@ -107,30 +113,30 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
               Text(
                 'Point at any product barcode',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: textMuted,
                   fontSize: 14,
                 ),
               ),
               const SizedBox(height: 32),
 
               // Viewfinder
-              _buildViewfinder(),
+              _buildViewfinder(surf),
               const SizedBox(height: 24),
 
               // Scanning Status Card
-              _buildScanningStatus(),
+              _buildScanningStatus(surf, textPrimary, textMuted),
               const SizedBox(height: 24),
 
               // Divider
-              _buildDivider(),
+              _buildDivider(textMuted),
               const SizedBox(height: 24),
 
               // Upload Image Button
-              _buildUploadButton(),
+              _buildUploadButton(surf, textPrimary),
               const SizedBox(height: 24),
 
               // Recent Scans
-              _buildRecentScans(),
+              _buildRecentScans(surf, textPrimary, textMuted),
             ],
           ),
         ),
@@ -140,14 +146,14 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildViewfinder() {
+  Widget _buildViewfinder(Color surf) {
     return Container(
       width: double.infinity,
       height: 240,
       decoration: BoxDecoration(
-        color: cardBg,
+        color: surf,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -161,7 +167,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                 margin: const EdgeInsets.symmetric(horizontal: 1.5),
                 width: isThick ? 4 : 2,
                 height: 80,
-                color: Colors.white.withOpacity(0.4),
+                color: Colors.grey.withOpacity(0.4),
               );
             }),
           ),
@@ -201,14 +207,14 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildScanningStatus() {
+  Widget _buildScanningStatus(Color surf, Color textPrimary, Color textMuted) {
     return GestureDetector(
       onTap: () => _captureBarcode(ImageSource.camera),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: cardBg.withOpacity(0.7),
+          color: surf.withOpacity(0.7),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.2)),
         ),
@@ -232,7 +238,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
               Text(
                 'Supports EAN-13, UPC-A, QR',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
+                  color: textMuted,
                   fontSize: 12,
                 ),
               ),
@@ -243,22 +249,22 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildUploadButton() {
+  Widget _buildUploadButton(Color surf, Color textPrimary) {
     return GestureDetector(
       onTap: () => _captureBarcode(ImageSource.gallery),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: cardBg.withOpacity(0.7),
+          color: surf.withOpacity(0.7),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
         ),
         child: Center(
           child: Text(
             'Upload Barcode Image',
             style: GoogleFonts.outfit(
-              color: Colors.white,
+              color: textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
@@ -268,26 +274,26 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(Color textMuted) {
     return Row(
       children: [
-        Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.1))),
+        Expanded(child: Container(height: 1, color: Colors.grey.withOpacity(0.2))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             '— or —',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.4),
+              color: textMuted,
               fontSize: 13,
             ),
           ),
         ),
-        Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.1))),
+        Expanded(child: Container(height: 1, color: Colors.grey.withOpacity(0.2))),
       ],
     );
   }
 
-  Widget _buildRecentScans() {
+  Widget _buildRecentScans(Color surf, Color textPrimary, Color textMuted) {
     final scans = [
       {'name': "Nature's Path Granola", 'kcal': 210},
       {'name': "Amul Greek Yogurt", 'kcal': 140},
@@ -297,9 +303,9 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardBg.withOpacity(0.7),
+        color: surf.withOpacity(0.7),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,7 +313,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
           Text(
             'RECENT SCANS',
             style: GoogleFonts.outfit(
-              color: Colors.white.withOpacity(0.6),
+              color: textMuted,
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
@@ -323,8 +329,8 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                   children: [
                     Text(
                       scan['name'] as String,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -332,7 +338,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                     Text(
                       '${scan['kcal']} kcal',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
+                        color: textMuted,
                         fontSize: 13,
                       ),
                     ),
@@ -340,7 +346,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                 ),
                 if (!isLast) ...[
                   const SizedBox(height: 16),
-                  Container(height: 1, color: Colors.white.withOpacity(0.05)),
+                  Container(height: 1, color: Colors.grey.withOpacity(0.1)),
                   const SizedBox(height: 16),
                 ]
               ],

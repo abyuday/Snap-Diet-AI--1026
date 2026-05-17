@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/nutrition_result.dart';
 import 'database_helper.dart';
 import 'firestore_service.dart';
+import 'api_service.dart';
 
 class HistoryEntry {
   final String foodName;
@@ -31,6 +32,7 @@ class HistoryProvider extends ChangeNotifier {
   List<HistoryEntry> _history = [];
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final FirestoreService _firestore = FirestoreService();
+  final ApiService _apiService = ApiService();
   String? _userId;
 
   HistoryProvider();
@@ -38,13 +40,76 @@ class HistoryProvider extends ChangeNotifier {
   void setUserId(String? uid) {
     if (_userId != uid) {
       _userId = uid;
-      _loadHistory();
+      if (_userId == null) {
+        _history.clear();
+        _dbHelper.clearHistory();
+        notifyListeners();
+      } else {
+        _loadHistory();
+      }
     }
   }
 
   Future<void> _loadHistory() async {
-    _history = await _dbHelper.getHistory();
+    try {
+      if (_userId != null && ApiService.authToken != null) {
+        final serverData = await _apiService.getHistory();
+        _history = serverData.map((map) {
+          DateTime dt;
+          try {
+            dt = DateTime.parse(map['date']);
+          } catch (e) {
+            dt = DateTime.now();
+          }
+          return HistoryEntry(
+            foodName: map['foodName'] ?? '',
+            dateTime: dt,
+            calories: (map['calories'] ?? 0).toDouble(),
+            protein: (map['protein'] ?? 0).toDouble(),
+            carbs: (map['carbs'] ?? 0).toDouble(),
+            fat: (map['fat'] ?? 0).toDouble(),
+            emoji: map['emoji'] ?? '🍽️',
+            imagePath: map['imagePath'] ?? '',
+          );
+        }).toList();
+        
+        // Sync any local DB entries to server that might not be on server
+        final localData = await _dbHelper.getHistory();
+        for (var localEntry in localData) {
+          if (!_history.any((e) => e.foodName == localEntry.foodName && e.dateTime.toIso8601String() == localEntry.dateTime.toIso8601String())) {
+            _history.add(localEntry);
+            _syncSingleEntryToCloud(localEntry);
+          }
+        }
+        _history.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+        
+        // Refresh local DB so it fully mirrors cloud data (enables true offline mode)
+        await _dbHelper.clearHistory();
+        for (var entry in _history.reversed) {
+          await _dbHelper.insertHistory(entry);
+        }
+      } else {
+        _history = await _dbHelper.getHistory();
+      }
+    } catch (e) {
+      _history = await _dbHelper.getHistory();
+    }
     notifyListeners();
+  }
+
+  Future<void> _syncSingleEntryToCloud(HistoryEntry entry) async {
+    try {
+      await _apiService.addHistory({
+        'foodName': entry.foodName,
+        'date': entry.dateTime.toIso8601String(),
+        'calories': entry.calories,
+        'protein': entry.protein,
+        'carbs': entry.carbs,
+        'fat': entry.fat,
+        'emoji': entry.emoji,
+        'imagePath': entry.imagePath,
+      });
+    } catch (_) {}
   }
 
   DateTime _selectedDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
@@ -176,17 +241,8 @@ class HistoryProvider extends ChangeNotifier {
     await _dbHelper.insertHistory(entry);
     
     // Save Cloud
-    if (_userId != null) {
-      await _firestore.addLog(_userId!, {
-        'food_name': entry.foodName,
-        'calories': entry.calories,
-        'protein': entry.protein,
-        'carbs': entry.carbs,
-        'fat': entry.fat,
-        'emoji': entry.emoji,
-        'image_path': entry.imagePath,
-        'date': entry.dateTime.toIso8601String(),
-      });
+    if (_userId != null && ApiService.authToken != null) {
+      _syncSingleEntryToCloud(entry);
     }
     
     notifyListeners();

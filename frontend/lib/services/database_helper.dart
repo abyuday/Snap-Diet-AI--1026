@@ -130,6 +130,15 @@ class DatabaseHelper {
     });
   }
 
+  Future<void> clearHistory() async {
+    if (kIsWeb) {
+      _webHistory.clear();
+      return;
+    }
+    dynamic db = await database;
+    await db.delete('history');
+  }
+
   // Water Methods
   Future<int> setWaterForToday(String date, int amount) async {
     if (kIsWeb) {

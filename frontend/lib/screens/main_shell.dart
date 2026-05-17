@@ -8,6 +8,7 @@ import 'dashboard_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
 import 'scanner_screen.dart';
+import 'multi_capture_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -43,7 +44,10 @@ class MainShellState extends State<MainShell> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1000),
-          child: _pages[_selectedIndex],
+          child: IndexedStack(
+            index: _selectedIndex,
+            children: _pages,
+          ),
         ),
       ),
 
@@ -90,7 +94,7 @@ class _CameraFab extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const ScannerScreen()),
+        context, MaterialPageRoute(builder: (_) => const MultiCaptureScreen()),
       ),
       child: Container(
         width: 62, height: 62,

@@ -24,6 +24,29 @@ class _ResultsScreenState extends State<ResultsScreen> {
   void initState() {
     super.initState();
     _loadBytes();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isFailed = widget.result.foodName == "Unable to confidently identify food" || 
+                       widget.result.foodName == "No Food Detected" || 
+                       widget.result.foodName == "Analysis Failed";
+      if (isFailed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('⚠️ Low confidence: Could not identify food.'),
+            backgroundColor: AppTheme.accentRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('✅ Scan completed successfully'),
+            backgroundColor: AppTheme.primaryColor,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _loadBytes() async {
@@ -62,7 +85,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
                 ),
-                child: Text('98% Match', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                child: Builder(
+                  builder: (context) {
+                    final conf = widget.result.rawData?['confidence'] as double? ?? 0.95;
+                    final confPct = (conf * 100).toInt();
+                    return Text('$confPct% Match', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 12));
+                  }
+                ),
               )
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -229,13 +258,18 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   Widget _buildActionButtons() {
+    final isFailed = widget.result.foodName == "Unable to confidently identify food" || widget.result.foodName == "No Food Detected" || widget.result.foodName == "Analysis Failed";
+    
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: isFailed ? () {
+              // Retake photo
+              Navigator.pop(context);
+            } : () {
               final historyProvider = Provider.of<HistoryProvider>(context, listen: false);
               historyProvider.addEntry(widget.result, widget.imageFile?.path ?? '');
               ScaffoldMessenger.of(context).showSnackBar(
@@ -245,13 +279,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   behavior: SnackBarBehavior.floating,
                 ),
               );
-              Navigator.pop(context);
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: isFailed ? AppTheme.accentRed : AppTheme.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            child: Text('Save to History', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0D1117))),
+            child: Text(isFailed ? 'Retake Photo' : 'Save to History', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0D1117))),
           ),
         ),
         const SizedBox(height: 16),

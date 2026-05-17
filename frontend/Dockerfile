@@ -3,11 +3,11 @@ FROM debian:latest AS build-env
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
-    git unzip xz-utils libglu1-mesa ca-certificates --no-install-recommends
+    git unzip xz-utils libglu1-mesa ca-certificates curl --no-install-recommends
 
-# Copy local Flutter SDK archive (avoids flaky network download)
-COPY flutter_linux_3.22.0.tar.xz /tmp/flutter_linux_3.22.0.tar.xz
-RUN mkdir -p /opt/flutter \
+# Download Flutter SDK archive instead of copying local file
+RUN curl -o /tmp/flutter_linux_3.22.0.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.0-stable.tar.xz \
+    && mkdir -p /opt/flutter \
     && tar xf /tmp/flutter_linux_3.22.0.tar.xz -C /opt/flutter --strip-components=1 \
     && rm /tmp/flutter_linux_3.22.0.tar.xz
 

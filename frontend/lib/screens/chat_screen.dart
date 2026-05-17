@@ -138,7 +138,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       final response = await apiService.sendChatMessage(
         message: text,
-        profile: {'name': userProvider.name, 'rank': userProvider.rank},
+        profile: {
+          'name': userProvider.name, 
+          'rank': userProvider.rank,
+          'bmi': double.parse(userProvider.bmi.toStringAsFixed(1)),
+          'bmiCategory': userProvider.bmiCategory,
+          'activityLevel': userProvider.activityLevel,
+          'currentWeightKg': userProvider.weightKg,
+        },
         history: historyProvider.history
             .map((e) => {'calories': e.calories, 'protein': e.protein, 'name': e.foodName})
             .toList(),

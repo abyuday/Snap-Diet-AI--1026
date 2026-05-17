@@ -235,6 +235,47 @@ async def update_user(update: UserUpdate, current_user: dict = Depends(get_curre
     updated_user = await user_collection.find_one({"email": current_user["email"]})
     return user_helper(updated_user)
 
+class HistoryEntryCreate(BaseModel):
+    foodName: str
+    date: str
+    calories: float
+    protein: float
+    carbs: float
+    fat: float
+    emoji: str
+    imagePath: Optional[str] = ""
+
+@app.get("/api/history")
+async def get_history(current_user: dict = Depends(get_current_user)):
+    user_email = current_user["email"]
+    # We must import history_collection here or it should be imported at top
+    from database import history_collection
+    cursor = history_collection.find({"user_email": user_email}).sort("date", -1)
+    history = await cursor.to_list(length=1000)
+    for h in history:
+        h["id"] = str(h.pop("_id"))
+    return history
+
+@app.post("/api/history")
+async def add_history(entry: HistoryEntryCreate, current_user: dict = Depends(get_current_user)):
+    user_email = current_user["email"]
+    from database import history_collection
+    entry_dict = entry.dict()
+    entry_dict["user_email"] = user_email
+    # Check for duplicate to prevent duplicate entries from sync retry
+    existing = await history_collection.find_one({
+        "user_email": user_email,
+        "foodName": entry.foodName,
+        "date": entry.date
+    })
+    if existing:
+        existing["id"] = str(existing.pop("_id"))
+        return existing
+
+    result = await history_collection.insert_one(entry_dict)
+    entry_dict["id"] = str(result.inserted_id)
+    return entry_dict
+
 @app.get("/")
 def read_root():
     return {"message": "API V2 READY"}

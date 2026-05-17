@@ -252,4 +252,26 @@ class ApiService {
       throw Exception('Failed to update profile: ${response.body}');
     }
   }
+
+  Future<List<dynamic>> getHistory() async {
+    final response = await http.get(Uri.parse('$baseUrl/api/history'), headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch history: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> addHistory(Map<String, dynamic> entry) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/history'),
+      headers: _headers,
+      body: jsonEncode(entry),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to save history: ${response.body}');
+    }
+  }
 }

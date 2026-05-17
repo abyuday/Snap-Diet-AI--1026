@@ -204,14 +204,17 @@ IMPORTANT: RETURN ONLY A JSON OBJECT. DO NOT ESTIMATE WEIGHT IN GRAMS. Use porti
 - Discrete items: "1 burger", "2 pieces", "3 tacos"
 - Served dishes: "1 plate", "1 bowl", "1 medium portion"
 - Drinks: "1 glass", "1 cup"
+- Detect mixed foods accurately (e.g. "Fruit Salad (Apple, Banana, Kiwi)").
+- If the image DOES NOT contain food, or you are unsure, set "food" to "Unable to confidently identify food".
+- Assign a confidence_score between 0.0 and 1.0 based on your certainty.
 
 JSON Format:
-{"food": "<dish name>", "portion_description": "<portion size>", "confidence_note": "<brief detail>", "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}
+{"food": "<dish name>", "portion_description": "<portion size>", "confidence_score": <float>, "confidence_note": "<brief detail>", "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}
 
 Examples:
-{"food": "Burger", "portion_description": "1 piece", "confidence_note": "Sesame bun with patty", "est_calories_100g": 250, "est_protein_100g": 12.0, "est_carbs_100g": 20.0, "est_fat_100g": 14.0, "est_fiber_100g": 1.2, "est_sugar_100g": 4.5, "est_sodium_100g": 450.0, "est_potassium_100g": 200.0, "est_vitamin_a_100g": 10.0, "est_vitamin_c_100g": 2.0, "est_calcium_100g": 50.0, "est_iron_100g": 1.5}
-{"food": "Idli", "portion_description": "3 pieces", "confidence_note": "Steamed rice cakes", "est_calories_100g": 120, "est_protein_100g": 3.0, "est_carbs_100g": 25.0, "est_fat_100g": 0.5, "est_fiber_100g": 1.0, "est_sugar_100g": 0.0, "est_sodium_100g": 150.0, "est_potassium_100g": 50.0, "est_vitamin_a_100g": 0.0, "est_vitamin_c_100g": 0.0, "est_calcium_100g": 20.0, "est_iron_100g": 0.5}
-{"food": "Pepperoni Pizza", "portion_description": "2 slices", "confidence_note": "Red meat circles", "est_calories_100g": 280, "est_protein_100g": 11.0, "est_carbs_100g": 30.0, "est_fat_100g": 12.0, "est_fiber_100g": 2.0, "est_sugar_100g": 3.0, "est_sodium_100g": 600.0, "est_potassium_100g": 180.0, "est_vitamin_a_100g": 80.0, "est_vitamin_c_100g": 1.5, "est_calcium_100g": 120.0, "est_iron_100g": 1.2}"""
+{"food": "Burger", "portion_description": "1 piece", "confidence_score": 0.98, "confidence_note": "Sesame bun with patty", "est_calories_100g": 250, "est_protein_100g": 12.0, "est_carbs_100g": 20.0, "est_fat_100g": 14.0, "est_fiber_100g": 1.2, "est_sugar_100g": 4.5, "est_sodium_100g": 450.0, "est_potassium_100g": 200.0, "est_vitamin_a_100g": 10.0, "est_vitamin_c_100g": 2.0, "est_calcium_100g": 50.0, "est_iron_100g": 1.5}
+{"food": "Idli", "portion_description": "3 pieces", "confidence_score": 0.95, "confidence_note": "Steamed rice cakes", "est_calories_100g": 120, "est_protein_100g": 3.0, "est_carbs_100g": 25.0, "est_fat_100g": 0.5, "est_fiber_100g": 1.0, "est_sugar_100g": 0.0, "est_sodium_100g": 150.0, "est_potassium_100g": 50.0, "est_vitamin_a_100g": 0.0, "est_vitamin_c_100g": 0.0, "est_calcium_100g": 20.0, "est_iron_100g": 0.5}
+{"food": "Fruit Salad (Apple, Banana)", "portion_description": "1 bowl", "confidence_score": 0.90, "confidence_note": "Mixed cut fruits", "est_calories_100g": 50, "est_protein_100g": 0.5, "est_carbs_100g": 13.0, "est_fat_100g": 0.2, "est_fiber_100g": 2.0, "est_sugar_100g": 10.0, "est_sodium_100g": 2.0, "est_potassium_100g": 150.0, "est_vitamin_a_100g": 10.0, "est_vitamin_c_100g": 15.0, "est_calcium_100g": 10.0, "est_iron_100g": 0.2}"""
 
 
 _MULTI_IMAGE_PROMPT = """You are a food analysis expert. You have multiple images of the SAME dish from different angles.
@@ -225,9 +228,12 @@ IMPORTANT: Do NOT guess the weight in grams. Instead, describe the portion using
 - For discrete items: count pieces (e.g., "4 pieces")
 - For served dishes: use containers (e.g., "1 large bowl", "1 plate")
 - For drinks: use glass/cup (e.g., "1 tall glass")
+- Detect mixed foods accurately (e.g. "Fruit Salad (Apple, Banana, Kiwi)").
+- If the images DO NOT contain food, or you are unsure, set "food" to "Unable to confidently identify food".
+- Assign a confidence_score between 0.0 and 1.0 based on your certainty.
 
 Return ONLY a JSON object in this exact format:
-{"food": "<dish name>", "portion_description": "<e.g. 3 pieces>", "confidence_note": "<reason>", "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}"""
+{"food": "<dish name>", "portion_description": "<e.g. 3 pieces>", "confidence_score": <float>, "confidence_note": "<reason>", "est_calories_100g": <int>, "est_protein_100g": <float>, "est_carbs_100g": <float>, "est_fat_100g": <float>, "est_fiber_100g": <float>, "est_sugar_100g": <float>, "est_sodium_100g": <float>, "est_potassium_100g": <float>, "est_vitamin_a_100g": <float>, "est_vitamin_c_100g": <float>, "est_calcium_100g": <float>, "est_iron_100g": <float>}"""
 
 _TEXT_LOG_PROMPT = """You are a food analysis expert. The user has provided a text description of what they ate.
 
@@ -263,8 +269,10 @@ def predict_food(image_path: str) -> Dict[str, Any]:
         print(f"DEBUG: Calling _call_vlm_single for {image_path}", flush=True)
         vlm_result = _call_vlm_single(image_path)
         print(f"DEBUG: VLM Result: {bool(vlm_result)}", flush=True)
-        if vlm_result:
+        if vlm_result and vlm_result.get("food") != "Analysis Failed":
             return _ground_prediction(vlm_result, vit_prediction)
+        else:
+            print("WARNING: VLM failed or returned Analysis Failed. Falling back to local ViT.", flush=True)
     else:
         print("DEBUG: _client is NONE - check HF_TOKEN in .env", flush=True)
 
@@ -287,23 +295,13 @@ def predict_food_multi(image_paths: List[str]) -> Dict[str, Any]:
     # Multi-image VLM call (Bypass local YOLO/ViT for submission reliability)
     if _client:
         vlm_result = _call_vlm_multi(image_paths)
-        if vlm_result:
+        if vlm_result and vlm_result.get("food") != "Analysis Failed":
             vlm_result["images_used"] = len(image_paths)
             # Use raw VLM results without local grounding for speed
             return _ground_prediction(vlm_result, None)
 
     # Fallback to single-image prediction
     return predict_food(image_paths[0])
-
-
-def predict_food(image_path: str) -> Dict[str, Any]:
-    """Single-image DietAI24 pipeline (Reliability Mode)."""
-    if _client:
-        vlm_result = _call_vlm_single(image_path)
-        if vlm_result:
-            return _ground_prediction(vlm_result, None)
-    
-    return _empty_prediction()
 
 
 def predict_food_text(query: str) -> Dict[str, Any]:
@@ -435,8 +433,15 @@ def _call_vlm_single(image_path: str) -> Optional[Dict[str, Any]]:
 
         parsed = _parse_vlm_json(raw)
         if parsed and "food" in parsed:
+            score = float(parsed.get("confidence_score", 0.95))
+            food = parsed["food"].strip()
+            
+            # Confidence Validation: Reject low confidence or non-food predictions
+            if score < 0.60 or "unable to confidently" in food.lower() or "not food" in food.lower():
+                food = "Unable to confidently identify food"
+                
             return {
-                "food": parsed["food"].strip(),
+                "food": food,
                 "portion_description": parsed.get("portion_description", "1 serving"),
                 "confidence_note": parsed.get("confidence_note", ""),
                 "vlm_nutrition": {
@@ -453,7 +458,7 @@ def _call_vlm_single(image_path: str) -> Optional[Dict[str, Any]]:
                     "calcium_mg": float(parsed.get("est_calcium_100g", 0)),
                     "iron_mg": float(parsed.get("est_iron_100g", 0)),
                 } if "est_calories_100g" in parsed else None,
-                "confidence": 0.95,
+                "confidence": score,
                 "engine": f"Cloud VLM ({_AI_MODEL})",
             }
 
@@ -545,8 +550,15 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
 
         parsed = _parse_vlm_json(raw)
         if parsed and "food" in parsed:
+            score = float(parsed.get("confidence_score", 0.95))
+            food = parsed["food"].strip()
+            
+            # Confidence Validation: Reject low confidence or non-food predictions
+            if score < 0.60 or "unable to confidently" in food.lower() or "not food" in food.lower():
+                food = "Unable to confidently identify food"
+
             return {
-                "food": parsed["food"].strip(),
+                "food": food,
                 "portion_description": parsed.get("portion_description", "1 serving"),
                 "confidence_note": parsed.get("confidence_note", ""),
                 "vlm_nutrition": {
@@ -563,7 +575,7 @@ def _call_vlm_multi(image_paths: List[str]) -> Optional[Dict[str, Any]]:
                     "calcium_mg": float(parsed.get("est_calcium_100g", 0)),
                     "iron_mg": float(parsed.get("est_iron_100g", 0)),
                 } if "est_calories_100g" in parsed else None,
-                "confidence": 0.97,
+                "confidence": score,
                 "engine": f"Cloud VLM Multi ({_AI_MODEL})",
             }
 
@@ -631,6 +643,19 @@ def _ground_prediction(
     confidence = primary.get("confidence", 0.90)
     engine = primary.get("engine", "Unknown")
 
+    if food_name == "Unable to confidently identify food":
+        return {
+            "food": food_name,
+            "portion_description": "N/A",
+            "weight_grams": 0.0,
+            "nutrition": None,
+            "confidence": confidence,
+            "engine": engine,
+            "grounded": False,
+            "methodology": "Analysis Failed",
+            "images_used": primary.get("images_used", 1),
+        }
+
     # --- Ensemble confidence adjustment ---
     if vit_secondary:
         vit_food = vit_secondary["food"].lower().strip()
@@ -696,6 +721,11 @@ def _ground_prediction(
                     count = parse_portion_count(portion_desc)
                     weight_grams = count * 250.0 # Default guess
                     print(f"INFO: [Stage 3] Ungrounded - using heuristic weight: {weight_grams}g", flush=True)
+            
+            if nutrition and weight_grams > 0:
+                std_grams = nutrition.get("standard_portion_grams", 100.0)
+                nutrition = rag.scale_nutrition_by_weight(nutrition, std_grams, weight_grams)
+                print(f"INFO: [Stage 3] Scaled ungrounded nutrition to {weight_grams}g", flush=True)
 
     except Exception as e:
         print(f"WARNING: [Stage 3] Portion grounding failed: {e}", flush=True)
@@ -713,6 +743,30 @@ def _ground_prediction(
             is_vlm_estimate = True
             engine += " (AI Estimate)"
             print(f"INFO: [Stage 4] Using VLM Fallback Nutrition for '{food_name}'", flush=True)
+
+    # --- Stage 5: Generic Fallback ---
+    # If we STILL have no nutrition (e.g. food not in DB and no VLM nutrition),
+    # provide a realistic fallback instead of 0s.
+    if not nutrition:
+        generic_nut = {
+            "calories": 150.0,
+            "protein": 5.0,
+            "carbs": 15.0,
+            "fat": 7.0,
+            "fiber_g": 2.0,
+            "standard_portion_grams": 100.0
+        }
+        if weight_grams <= 0:
+            from services.rag_service import parse_portion_count
+            count = parse_portion_count(portion_desc)
+            weight_grams = count * 200.0 # Realistic generic serving
+            print(f"INFO: [Stage 5] No portion data. Using generic 200g serving.", flush=True)
+            
+        from services.rag_service import get_rag_service
+        rag = get_rag_service()
+        nutrition = rag.scale_nutrition_by_weight(generic_nut, 100.0, weight_grams)
+        engine += " (Generic Fallback)"
+        print(f"INFO: [Stage 5] Generated generic fallback nutrition for '{food_name}'", flush=True)
 
     return {
         "food": food_name,
@@ -756,10 +810,10 @@ def _prediction_to_response(prediction: Dict[str, Any]) -> Dict[str, Any]:
     weight_grams = prediction.get("weight_grams", 0.0)
     portion_desc = prediction.get("portion_description", "Standard Serving")
     grounded = prediction.get("grounded", False)
-    if "empty plate" in food_name.lower() or "no food" in food_name.lower():
+    if "empty plate" in food_name.lower() or "no food" in food_name.lower() or "unable to confidently" in food_name.lower():
         weight_grams = 0.0
         portion_desc = "N/A"
-        food_name = "No Food Detected"
+        food_name = "Unable to confidently identify food"
 
     if nutrition:
         return {

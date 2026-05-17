@@ -114,6 +114,10 @@ class DashboardScreen extends StatelessWidget {
               _buildCalendarStrip(context, history, surf, border, accent, textPrimary, textMuted),
               const SizedBox(height: 24),
 
+              // Smart AI Insight Card
+              _buildSmartInsightCard(user, calEaten, calGoal, protEaten, protGoal, surf, border, textPrimary, textMuted, shadowColor),
+              const SizedBox(height: 20),
+
               // Daily Calories card
               _buildCalorieCard(calEaten, calGoal, accent, surf, border, textPrimary, textMuted, shadowColor),
               const SizedBox(height: 16),
@@ -133,6 +137,79 @@ class DashboardScreen extends StatelessWidget {
         ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _logWater(UserProvider user, int amount) {
+    user.addWater(amount);
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('💧 Added $amount ml of water'),
+        backgroundColor: const Color(0xFF4FA3E0),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget _buildSmartInsightCard(UserProvider user, double calEaten, double calGoal, double protEaten, double protGoal,
+      Color surf, Color border, Color textPrimary, Color textMuted, Color shadowColor) {
+    String insightText = "You're on track with your goals today! Keep it up.";
+    IconData insightIcon = Icons.stars_rounded;
+    Color insightColor = AppTheme.primaryColor;
+
+    if (calEaten > calGoal && calGoal > 0) {
+      insightText = "You've exceeded your daily calorie target. Consider lighter meals.";
+      insightColor = AppTheme.accentRed;
+      insightIcon = Icons.warning_rounded;
+    } else if (user.currentWater >= user.waterGoal && user.waterGoal > 0) {
+      insightText = "Hydration goal completed! Excellent work today.";
+      insightColor = const Color(0xFF4FA3E0);
+      insightIcon = Icons.water_drop;
+    } else if (protEaten < protGoal * 0.5 && calEaten > calGoal * 0.5) {
+      insightText = "Protein intake is below target. Add more lean meats or legumes.";
+      insightColor = const Color(0xFFFFB74D);
+      insightIcon = Icons.bolt_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surf,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(color: shadowColor, blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: insightColor.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(insightIcon, color: insightColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('AI INSIGHT', style: TextStyle(color: textMuted, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                const SizedBox(height: 6),
+                Text(
+                  insightText,
+                  style: TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -412,7 +489,7 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: InkWell(
-                  onTap: () => user.addWater(250),
+                  onTap: () => _logWater(user, 250),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -429,7 +506,7 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: InkWell(
-                  onTap: () => user.addWater(500),
+                  onTap: () => _logWater(user, 500),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),

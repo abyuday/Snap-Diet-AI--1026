@@ -72,6 +72,10 @@ class ProfileScreen extends StatelessWidget {
                   _infoRow('Current Weight', user.weightKg > 0 ? '${user.weightKg.toStringAsFixed(1)} kg' : '—', textPrimary, textMuted),
                   _divider(border),
                   _infoRow('Target Weight',  user.targetWeightKg > 0 ? '${user.targetWeightKg.toStringAsFixed(1)} kg' : '—', accent, textMuted),
+                  if (user.bmi > 0) ...[
+                    _divider(border),
+                    _infoRow('BMI', '${user.bmi.toStringAsFixed(1)} (${user.bmiCategory})', textPrimary, textMuted),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),
@@ -299,6 +303,14 @@ class ProfileScreen extends StatelessWidget {
                 protein: int.tryParse(protCtrl.text) ?? user.proteinGoal,
               );
               Navigator.pop(context);
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('✅ Profile updated successfully'),
+                  backgroundColor: accent,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
             child: Text('Save', style: TextStyle(color: accent, fontWeight: FontWeight.bold)),
           ),

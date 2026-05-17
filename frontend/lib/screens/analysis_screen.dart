@@ -96,6 +96,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           _hasError = true;
           _errorMessage = e.toString();
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('⚠️ Network/API Error: Could not complete analysis.'),
+            backgroundColor: const Color(0xFFFF6B6B), // AppTheme.accentRed
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }

@@ -35,6 +35,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool _isSubmitting = false;
 
+  double _bmi = 0.0;
+  String _bmiCategory = 'Unknown';
+
+  @override
+  void initState() {
+    super.initState();
+    _heightCtrl.addListener(_updateBmi);
+    _weightCtrl.addListener(_updateBmi);
+  }
+
+  void _updateBmi() {
+    final h = double.tryParse(_heightCtrl.text) ?? 0.0;
+    final w = double.tryParse(_weightCtrl.text) ?? 0.0;
+    if (h > 0 && w > 0) {
+      double hM = h / 100.0;
+      double bmi = w / (hM * hM);
+      String cat = 'Obese';
+      if (bmi < 18.5) cat = 'Underweight';
+      else if (bmi < 25.0) cat = 'Normal';
+      else if (bmi < 30.0) cat = 'Overweight';
+      
+      setState(() {
+        _bmi = bmi;
+        _bmiCategory = cat;
+      });
+    } else {
+      setState(() {
+        _bmi = 0.0;
+        _bmiCategory = 'Unknown';
+      });
+    }
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -123,8 +156,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         : 1.55;
 
     double tdee = bmr * actFactor;
-    if (_goal == 'weight_loss')   tdee -= 300;
-    if (_goal == 'muscle_gain')   tdee += 200;
+    if (_goal == 'weight_loss') {
+      if (_bmiCategory == 'Obese') tdee -= 500;
+      else if (_bmiCategory == 'Overweight') tdee -= 400;
+      else tdee -= 300;
+    }
+    if (_goal == 'muscle_gain') {
+      if (_bmiCategory == 'Underweight') tdee += 300;
+      else tdee += 200;
+    }
 
     int cal     = tdee.round();
     int protein = (weight * 1.8).round();                    // ~1.8g per kg
@@ -145,13 +185,91 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!_validateStep()) return;
     setState(() => _isSubmitting = true);
 
+    final height = double.tryParse(_heightCtrl.text) ?? 170;
+    final weight = double.tryParse(_weightCtrl.text) ?? 70;
+    final bmi = weight / ((height / 100) * (height / 100));
+    
+    String category = 'Normal Weight';
+    Color catColor = const Color(0xFF10B981); // Green
+    if (bmi < 18.5) {
+      category = 'Underweight';
+      catColor = const Color(0xFFF59E0B); // Amber
+    } else if (bmi >= 25 && bmi < 30) {
+      category = 'Overweight';
+      catColor = const Color(0xFFF59E0B);
+    } else if (bmi >= 30) {
+      category = 'Obese';
+      catColor = const Color(0xFFEF4444); // Red
+    }
+
+    final isDark = context.read<ThemeProvider>().isDark;
+    final surf = isDark ? AppTheme.darkSurface : AppTheme.lightSurface;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final accent = isDark ? AppTheme.primaryColor : AppTheme.primaryDark;
+
+    // Show the smooth BMI popup
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: surf,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.health_and_safety, color: catColor, size: 56),
+                const SizedBox(height: 16),
+                Text('Your Health Profile', style: GoogleFonts.outfit(color: textPrimary, fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 24),
+                Text(bmi.toStringAsFixed(1), style: GoogleFonts.outfit(color: textPrimary, fontSize: 48, fontWeight: FontWeight.w800, height: 1.0)),
+                Text('BMI', style: TextStyle(color: textPrimary.withOpacity(0.5), fontSize: 14, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: catColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: catColor.withOpacity(0.3)),
+                  ),
+                  child: Text(category.toUpperCase(), style: TextStyle(color: catColor, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'We have personalized your daily calorie and macronutrient goals based on your body metrics to help you reach your target weight sustainably.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: textPrimary.withOpacity(0.7), fontSize: 14, height: 1.5),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Get Started', style: GoogleFonts.outfit(color: surf, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
     final goals = _calculateGoals();
     try {
       await context.read<UserProvider>().completeOnboarding(
         age:            int.tryParse(_ageCtrl.text) ?? 25,
         gender:         _gender,
-        heightCm:       double.tryParse(_heightCtrl.text) ?? 170,
-        weightKg:       double.tryParse(_weightCtrl.text) ?? 70,
+        heightCm:       height,
+        weightKg:       weight,
         targetWeightKg: double.tryParse(_targetWeightCtrl.text) ?? 65,
         activityLevel:  _activityLevel,
         goal:           _goal,
@@ -332,6 +450,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _label('Target Weight (kg)', textMuted),
           _textField(_targetWeightCtrl, 'e.g. 65', Icons.flag_outlined, surf, isDark, textMuted,
               keyboardType: TextInputType.number),
+          
+          if (_bmi > 0) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accent.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Your BMI', style: GoogleFonts.outfit(color: textMuted, fontSize: 13)),
+                      Text(_bmi.toStringAsFixed(1), style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: textPrimary)),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(_bmiCategory, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

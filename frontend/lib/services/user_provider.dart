@@ -27,6 +27,22 @@ class UserProvider extends ChangeNotifier {
   String get activityLevel  => _user?['activity_level'] ?? 'medium';
   String get goal           => _user?['goal']           ?? 'maintenance';
 
+  // BMI calculations
+  double get bmi {
+    if (heightCm <= 0 || weightKg <= 0) return 0.0;
+    double hM = heightCm / 100.0;
+    return weightKg / (hM * hM);
+  }
+
+  String get bmiCategory {
+    final b = bmi;
+    if (b == 0) return 'Unknown';
+    if (b < 18.5) return 'Underweight';
+    if (b < 25.0) return 'Normal';
+    if (b < 30.0) return 'Overweight';
+    return 'Obese';
+  }
+
   // Daily goals
   int get calorieGoal => _user?['goals']?['calorieGoal'] ?? 2000;
   int get proteinGoal => _user?['goals']?['proteinGoal'] ?? 120;
@@ -36,14 +52,34 @@ class UserProvider extends ChangeNotifier {
 
   int currentWater = 0;
 
-  void addWater(int amount) {
-    currentWater += amount;
+  Future<void> _loadWater() async {
+    final prefs = await SharedPreferences.getInstance();
+    final date = prefs.getString('waterDate');
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    if (date == today) {
+      currentWater = prefs.getInt('currentWater') ?? 0;
+    } else {
+      currentWater = 0;
+      await prefs.setString('waterDate', today);
+      await prefs.setInt('currentWater', 0);
+    }
     notifyListeners();
   }
 
-  void resetWater() {
+  void addWater(int amount) async {
+    currentWater += amount;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('currentWater', currentWater);
+    await prefs.setString('waterDate', DateTime.now().toIso8601String().split('T')[0]);
+  }
+
+  void resetWater() async {
     currentWater = 0;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('currentWater', 0);
+    await prefs.setString('waterDate', DateTime.now().toIso8601String().split('T')[0]);
   }
 
   Future<void> tryAutoLogin() async {
@@ -66,6 +102,7 @@ class UserProvider extends ChangeNotifier {
     }
 
     _onboardingComplete = prefs.getBool('onboardingDone') ?? false;
+    await _loadWater();
     notifyListeners();
   }
 
@@ -92,6 +129,7 @@ class UserProvider extends ChangeNotifier {
     } else {
       await prefs.setString('userData', 'exists');
     }
+    await _loadWater();
     notifyListeners();
   }
 
